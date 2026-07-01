@@ -161,6 +161,7 @@
   footer{border-top:1px solid var(--line);padding:26px 0;color:var(--ink-soft);font-size:13px}
   .kbd{font-family:"JetBrains Mono",monospace;background:#fff;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12px}
   :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+  .scrollhint{color:var(--m5C);font-weight:600;text-transform:none;letter-spacing:0}
   /* ============ MOBILE / SMARTPHONE ============ */
   @media(max-width:860px){
     body{-webkit-text-size-adjust:100%}
@@ -168,47 +169,64 @@
     nav.stepper{position:sticky;top:0;z-index:30;background:var(--paper);padding:10px 0 8px;box-shadow:0 6px 10px -8px rgba(0,0,0,.25)}
     .stepper ol{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;scrollbar-width:none}
     .stepper ol::-webkit-scrollbar{display:none}
-    .step{flex:0 0 auto;gap:8px;align-items:center;padding:8px 13px;border:1px solid var(--line);background:var(--card);border-radius:999px}
+    .step{flex:0 0 auto;gap:8px;align-items:center;padding:9px 14px;border:1px solid var(--line);background:var(--card);border-radius:999px}
     .step:hover{background:var(--card)}
-    .step .lab{white-space:nowrap;font-size:13px;line-height:1}
+    .step .lab{white-space:nowrap;font-size:13.5px;line-height:1}
     .step .sub{display:none}
-    .step .num{width:22px;height:22px;flex-basis:22px}
-    .step[aria-current="true"]{border-color:var(--m5C)}
+    .step .num{width:23px;height:23px;flex-basis:23px}
+    .step[aria-current="true"]{border-color:var(--m5C);background:#fff}
     .progress{margin-top:10px}
     main{padding-top:18px}
+    /* all diagrams fit the screen by default */
+    .diagram svg{width:100%;height:auto}
   }
   @media(max-width:560px){
-    .wrap{padding:0 14px}
-    header.hero{padding:32px 0 26px}
-    header.hero p.lede{font-size:15.5px}
-    .module > p.intro{font-size:15.5px}
-    .panel{padding:17px 15px;border-radius:12px}
-    /* wide diagrams: pan horizontally instead of shrinking to unreadable */
-    .panel.diagram{overflow-x:auto;-webkit-overflow-scrolling:touch}
-    .panel.diagram svg{min-width:500px}
-    .diag-cap{position:sticky;left:0}
+    .wrap{padding:0 16px}
+    header.hero{padding:30px 0 26px}
+    header.hero p.lede{font-size:16px;line-height:1.5}
+    .module h2{font-size:25px}
+    .module > p.intro{font-size:16.5px;line-height:1.55}
+    .panel{padding:18px 16px;border-radius:12px;margin-top:16px}
+    .panel p{font-size:16px}
+    .panel h3{font-size:12px}
+    .analogy{font-size:16px}
+    .diag-cap{font-size:13px}
+    /* pictorial diagrams: fit; dense ones: pan */
+    .panel.diagram.wide{overflow-x:auto;-webkit-overflow-scrolling:touch}
+    .panel.diagram.wide svg{width:100%;min-width:640px;height:auto}
     /* conversion bench */
+    .bench-panel,.pcr-panel{padding:18px 15px}
+    .bench-panel .hint,.pcr-panel .hint{font-size:14.5px}
     .arow{gap:6px}
-    .arow .rl{flex-basis:60px;width:60px;font-size:9.5px}
+    .arow .rl{flex-basis:58px;width:58px;font-size:9.5px}
     .arow .end{flex-basis:14px;width:14px}
     .cells{gap:4px}
-    .nt{width:27px;height:34px;font-size:15px}
-    .bench-panel,.pcr-panel{padding:18px 14px}
+    .nt{width:28px;height:35px;font-size:16px}
+    .readout{font-size:14.5px}
+    /* stepcards + flow: single column so the workflow reads top-to-bottom */
+    .flow{grid-template-columns:1fr}
+    .stepcard{padding:15px 16px}
+    .stepcard h4{font-size:16px}
+    .stepcard p{font-size:14.5px}
     /* touch targets */
-    .opt{padding:13px 14px;min-height:46px}
-    .btn{min-height:46px}
+    .opt{padding:14px 15px;min-height:48px;font-size:15.5px}
+    .btn{min-height:48px;font-size:15px}
+    .quiz{padding:20px 16px}
+    .quiz h3{font-size:17px}
+    .quiz .q p.qtext{font-size:16px}
+    .explain{font-size:14.5px}
     .navrow{gap:8px}
-    .navrow button{flex:1;min-height:46px;font-size:12.5px;padding:11px 8px;text-align:center}
+    .navrow button{flex:1;min-height:48px;font-size:13.5px;padding:12px 8px;text-align:center}
     /* pcr */
-    .pcr-stats .big{font-size:30px}
-    .pcrpop .lane-l{flex-basis:98px}
-    .flow{grid-template-columns:1fr 1fr}
-    .quiz,.pcr-panel h3,.bench-panel h3{overflow-wrap:break-word}
+    .pcr-stats .big{font-size:32px}
+    .pcr-stats .copies{font-size:14px}
+    .pcrpop .lane-l{flex-basis:104px;font-size:11px}
   }
   @media(max-width:390px){
-    .flow{grid-template-columns:1fr}
+    .wrap{padding:0 13px}
     .legend{font-size:11px;gap:9px}
-    .nt{width:25px;height:32px;font-size:14px}
+    .nt{width:26px;height:33px;font-size:15px}
+    .arow .rl{flex-basis:52px;width:52px}
   }
 </style>
 </head>
@@ -587,7 +605,7 @@ const MODULES = [
   {
     tag:"STEP 03 · CORE", title:"Bisulfite Conversion", short:"C → U, but m⁵C survives",
     intro:"This is the chemical heart of the method. Sodium bisulfite drives cytosine through three steps — sulfonation, deamination, desulfonation — ending at uracil. A 5-methyl group blocks the first step, so m⁵C never enters the pathway and stays a C. After conversion, every C left standing marks a methylation site. Build a strand on the bench and run the reaction; the reference, converted, and read rows stay aligned so you can read straight down each column.",
-    diagram:bisulfiteDiagram(), diagramCap:"Top: cytosine is sulfonated at C6, deaminated (loses NH₃) to a uracil-sulfonate, then desulfonated under alkali to uracil — read as T. Bottom: the 5-CH₃ of m⁵C shields the C5–C6 bond, so sulfonation never starts and it stays C.",
+    wide:true, diagram:bisulfiteDiagram(), diagramCap:"Top: cytosine is sulfonated at C6, deaminated (loses NH₃) to a uracil-sulfonate, then desulfonated under alkali to uracil — read as T. Bottom: the 5-CH₃ of m⁵C shields the C5–C6 bond, so sulfonation never starts and it stays C.",
     bench:true,
     panels:[
       {h:"The chemistry, in three moves",html:`(1) <b>Sulfonation</b> — bisulfite adds across the C5–C6 double bond, giving cytosine-6-sulfonate. (2) <b>Hydrolytic deamination</b> — the C4 amino group leaves as ammonia, converting the ring to uracil-6-sulfonate. (3) <b>Desulfonation</b> under alkali removes the C6 sulfonate, restoring the 5,6 double bond and leaving <b>uracil</b>. The 5-methyl group of m⁵C sterically and electronically hinders step 1, so methylated cytosines never convert and read as C.`},
@@ -608,7 +626,7 @@ const MODULES = [
   {
     tag:"STEP 04", title:"Reverse Transcription", short:"Copy fragile RNA into stable cDNA",
     intro:"Bisulfite-converted RNA is a hot, acid-battered, single-stranded molecule that won't survive PCR and can't serve as a template for a DNA polymerase. Reverse transcriptase reads it once and writes a durable DNA copy — cDNA — locking in the conversion result before anything else touches the sample.",
-    diagram:DIAG_rt, diagramCap:"A primer anneals to the converted RNA (3′→5′) and reverse transcriptase extends a complementary cDNA strand 5′→3′. A template U (former unmethylated C) pairs A and later reads T; a surviving m⁵C templates G and reads C.",
+    wide:true, diagram:DIAG_rt, diagramCap:"A primer anneals to the converted RNA (3′→5′) and reverse transcriptase extends a complementary cDNA strand 5′→3′. A template U (former unmethylated C) pairs A and later reads T; a surviving m⁵C templates G and reads C.",
     panels:[
       {h:"The principle",html:`A primer (random hexamers, oligo-dT, or a gene-specific primer) anneals to the converted RNA; <b>reverse transcriptase</b> extends it, synthesising first-strand cDNA. Each template uracil directs an adenine in the cDNA, so the unmethylated-C signal — now a U — is permanently captured as a T-reading position. Surviving m⁵C still templates as C.`},
       {a:true,html:`<b>Analogy.</b> The converted RNA is a wet, smudge-prone original that's already starting to tear. Reverse transcription photocopies it onto durable paper <b>before</b> it falls apart — every later step works from the sturdy copy, not the fragile original.`},
@@ -632,7 +650,7 @@ const MODULES = [
   {
     tag:"STEP 05", title:"Primer Design for Converted cDNA", short:"A C-depleted template changes the rules",
     intro:"Conversion rewrote your template: most cytosines became uracil, then thymine in the cDNA. Primers designed against the original sequence won't bind. You design against the converted strand — and you keep the cytosine you're testing out of both primers.",
-    diagram:primerDiagram(), diagramCap:"Design primers on the converted cDNA and place them in flanking regions. The candidate m⁵C (violet) sits inside the amplicon but outside both primers; arrows show each primer's 5′→3′ direction.",
+    wide:true, diagram:primerDiagram(), diagramCap:"Design primers on the converted cDNA and place them in flanking regions. The candidate m⁵C (violet) sits inside the amplicon but outside both primers; arrows show each primer's 5′→3′ direction.",
     panels:[
       {h:"What changes after conversion",html:`The converted strand is <b>C-poor and T-rich</b>, because nearly every C turned into T. That lowers sequence complexity and melting temperature and makes mispriming easier. Two practical rules follow.`},
       {a:true,html:`<b>Analogy.</b> Conversion translates your paragraph into a language with almost no letter "C." You can't reuse old primer "sentences" — you rewrite them in the new alphabet, and you avoid the few C's that remain, because their identity is exactly what you're measuring.`},
@@ -713,7 +731,7 @@ function panelHTML(p){
 }
 function diagramHTML(m){
   if(!m.diagram) return '';
-  return `<div class="panel diagram"><h3>Diagram</h3>${m.diagram}${m.diagramCap?`<p class="diag-cap">${m.diagramCap}</p>`:''}</div>`;
+  return `<div class="panel diagram ${m.wide?'wide':''}"><h3>Diagram${m.wide?' <span class="scrollhint">· swipe to pan</span>':''}</h3>${m.diagram}${m.diagramCap?`<p class="diag-cap">${m.diagramCap}</p>`:''}</div>`;
 }
 function quizHTML(q,mi){
   return `<div class="quiz"><h3>${q.title}</h3>
