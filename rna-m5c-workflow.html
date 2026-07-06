@@ -1,0 +1,1032 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>The Conversion Bench — RNA m5C from purification to PCR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EAEFEE; --card:#FFFFFF; --bench:#10171A; --ink:#10201B; --ink-soft:#46594F;
+    --line:#CBD6D1; --line-d:#27332F;
+    --A:#27A052; --C:#2F6FED; --G:#E0A12E; --U:#E0533D; --m5C:#9B4DDB;
+    --ok:#27A052; --bad:#E0533D; --focus:#9B4DDB;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important;scroll-behavior:auto}}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+  h1,h2,h3,h4,.disp{font-family:"Space Grotesk",sans-serif;letter-spacing:-.01em}
+  .mono{font-family:"JetBrains Mono",monospace}
+  a{color:var(--C)}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+  .grid{display:grid;grid-template-columns:248px 1fr;gap:34px;align-items:start}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+
+  header.hero{background:var(--bench);color:#E7EEEA;padding:46px 0 40px;border-bottom:1px solid var(--line-d)}
+  .eyebrow{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:#7FE0B0}
+  header.hero h1{font-size:clamp(30px,5vw,52px);line-height:1.02;margin:.34em 0 .35em;font-weight:600;color:#F3F8F5}
+  header.hero p.lede{max-width:60ch;color:#AEC1B8;font-size:17px;margin:0}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:26px;font-family:"JetBrains Mono",monospace;font-size:12.5px}
+  .legend span{display:inline-flex;align-items:center;gap:7px;color:#C7D6CF}
+  .swatch{width:13px;height:13px;border-radius:3px;display:inline-block}
+
+  nav.stepper{position:sticky;top:18px}
+  .stepper ol{list-style:none;margin:0;padding:0}
+  .step{display:flex;gap:13px;padding:11px 12px;border-radius:11px;cursor:pointer;align-items:flex-start;border:1px solid transparent;transition:background .15s,border-color .15s}
+  .step:hover{background:#dfe7e4}
+  .step[aria-current="true"]{background:var(--card);border-color:var(--line);box-shadow:0 1px 0 rgba(0,0,0,.03)}
+  .step .num{font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:700;width:26px;height:26px;flex:0 0 26px;border-radius:7px;display:grid;place-items:center;background:#d3ddd8;color:var(--ink-soft)}
+  .step[aria-current="true"] .num{background:var(--ink);color:#fff}
+  .step.done .num{background:var(--ok);color:#fff}
+  .step .lab{font-size:14px;font-weight:500;line-height:1.25}
+  .step .sub{display:block;font-size:11.5px;color:var(--ink-soft);font-weight:400;margin-top:2px}
+  .progress{margin-top:16px;font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink-soft)}
+  .bar{height:6px;background:#d3ddd8;border-radius:99px;overflow:hidden;margin-top:7px}
+  .bar > i{display:block;height:100%;width:0;background:var(--m5C);transition:width .4s ease}
+
+  main{padding:34px 0 80px}
+  .module{display:none;animation:fade .35s ease}
+  .module.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .modhead{display:flex;align-items:baseline;gap:12px;margin-bottom:4px}
+  .modhead .tag{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--m5C);letter-spacing:.12em}
+  .module h2{font-size:clamp(23px,3.4vw,33px);margin:.1em 0 .15em;font-weight:600}
+  .module > p.intro{color:var(--ink-soft);font-size:16.5px;margin:.2em 0 0;max-width:66ch}
+
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:22px 24px;margin-top:20px}
+  .panel h3{font-size:13px;margin:0 0 12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);font-weight:600;font-family:"JetBrains Mono",monospace}
+  .panel p{margin:.4em 0}
+  .analogy{border-left:3px solid var(--m5C);padding:4px 0 4px 15px;background:linear-gradient(90deg,rgba(155,77,219,.06),transparent);border-radius:0 8px 8px 0}
+  .analogy b{color:var(--m5C)}
+  .story{border-left:3px solid var(--G);background:linear-gradient(90deg,rgba(224,161,46,.08),transparent)}
+  .story h3{color:#a9760f}
+  .story p{margin:.3em 0;font-size:14.5px}
+  .story a{color:#a9760f}
+  .diagram svg{width:100%;height:auto;display:block}
+  .diag-cap{font-size:12.5px;color:var(--ink-soft);margin-top:10px;font-family:"JetBrains Mono",monospace}
+
+  .flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:6px}
+  .stepcard{border:1px solid var(--line);border-radius:11px;padding:13px 14px;background:#fbfdfc}
+  .stepcard .n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--m5C);font-weight:700}
+  .stepcard h4{font-size:15px;margin:3px 0 5px;font-weight:600}
+  .stepcard p{font-size:13.5px;color:var(--ink-soft);margin:0}
+  .ref{font-size:12.5px;color:var(--ink-soft);font-family:"JetBrains Mono",monospace;margin-top:14px}
+  .ref a{color:var(--ink-soft);text-decoration:underline}
+
+  /* ---- conversion bench (aligned 3-row alignment) ---- */
+  .bench-panel{background:var(--bench);border:1px solid var(--line-d);border-radius:15px;padding:24px;margin-top:22px;color:#DEE9E3}
+  .bench-panel h3{color:#7FE0B0;font-family:"JetBrains Mono",monospace;font-size:13px;letter-spacing:.08em;text-transform:uppercase;margin:0 0 4px}
+  .bench-panel .hint{font-size:13.5px;color:#9DB3AA;margin:0 0 14px}
+  .align{display:grid;gap:8px;overflow-x:auto;padding-bottom:6px}
+  .arow{display:flex;align-items:center;gap:8px}
+  .arow .rl{flex:0 0 92px;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.05em;color:#7FE0B0;text-align:right}
+  .arow .end{flex:0 0 18px;width:18px;text-align:center;font-family:"JetBrains Mono",monospace;font-size:12px;color:#6f857c}
+  .cells{display:flex;gap:5px}
+  .nt{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:17px;width:30px;height:38px;border-radius:7px;display:grid;place-items:center;background:#1d2826;position:relative;user-select:none;transition:transform .25s,background .25s,color .25s}
+  .nt small{position:absolute;bottom:1px;font-size:7.5px;letter-spacing:0;opacity:.85;font-weight:500}
+  .nt.A{color:var(--A)} .nt.C{color:var(--C)} .nt.G{color:var(--G)} .nt.U{color:var(--U)} .nt.T{color:var(--U)}
+  .nt.m5C{color:#fff;background:var(--m5C);box-shadow:0 0 0 2px rgba(155,77,219,.4),0 6px 16px rgba(155,77,219,.35)}
+  .nt.callC{color:#fff;background:var(--m5C)}
+  .nt.callT{color:#fff;background:var(--U)}
+  .nt.clickable{cursor:pointer;outline:1px dashed #3a4b45}
+  .nt.clickable:hover{transform:translateY(-3px)}
+  .nt.ghost{opacity:0}
+  .nt.flip{animation:flip .5s ease}
+  @keyframes flip{0%{transform:rotateX(0)}45%{transform:rotateX(90deg)}55%{transform:rotateX(90deg)}100%{transform:rotateX(0)}}
+  .benchctl{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;align-items:center}
+  .btn{font-family:"Space Grotesk";font-weight:600;font-size:14px;border:0;border-radius:9px;padding:10px 16px;cursor:pointer;background:#28524a;color:#cdeee0;transition:background .15s,transform .1s}
+  .btn:hover{background:#316156}.btn:active{transform:translateY(1px)}
+  .btn.primary{background:var(--m5C);color:#fff}.btn.primary:hover{background:#a960e0}
+  .btn.ghost{background:transparent;border:1px solid #3a4b45;color:#9DB3AA}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .stagelab{font-family:"JetBrains Mono",monospace;font-size:12px;color:#7FE0B0;letter-spacing:.1em;margin-left:auto}
+  .readout{margin-top:16px;padding:14px;border:1px dashed #3a4b45;border-radius:10px;font-size:13.5px;color:#B9CCC4;min-height:20px}
+  .readout b.callC{color:#fff;background:var(--m5C);padding:1px 5px;border-radius:4px}
+  .readout b.callT{color:#fff;background:var(--U);padding:1px 5px;border-radius:4px}
+
+  /* ---- PCR simulator ---- */
+  .pcr-panel{background:var(--bench);border:1px solid var(--line-d);border-radius:15px;padding:24px;margin-top:22px;color:#DEE9E3}
+  .pcr-panel h3{color:#7FE0B0;font-family:"JetBrains Mono",monospace;font-size:13px;letter-spacing:.08em;text-transform:uppercase;margin:0 0 4px}
+  .pcr-top{display:grid;grid-template-columns:1.15fr .85fr;gap:22px;align-items:center}
+  @media(max-width:680px){.pcr-top{grid-template-columns:1fr}}
+  .pcrsvg{width:100%;height:auto;background:#0c1214;border:1px solid var(--line-d);border-radius:10px}
+  .pcr-stats .big{font-family:"Space Grotesk";font-weight:700;font-size:clamp(28px,6vw,40px);line-height:1;color:#F3F8F5}
+  .pcr-stats .lbl{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.12em;color:#7FE0B0;text-transform:uppercase}
+  .pcr-stats .copies{font-family:"JetBrains Mono",monospace;font-size:15px;color:#cdeee0;margin-top:10px}
+  .pcr-stats .copies b{color:#fff}
+  .pcr-bar{height:8px;background:#1d2826;border-radius:99px;overflow:hidden;margin-top:12px}
+  .pcr-bar>i{display:block;height:100%;width:0;background:var(--m5C);transition:width .35s ease}
+  .phase{font-family:"JetBrains Mono",monospace;font-size:12px;margin-top:14px;letter-spacing:.04em;min-height:18px;line-height:1.3}
+  .phase .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:middle}
+  .pcrctl{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;align-items:center}
+  .pcr-note{font-size:12.5px;color:#9DB3AA;margin-top:14px;font-family:"JetBrains Mono",monospace}
+  /* duplex animation states */
+  #topStrand,#botStrand{transition:transform .35s ease}
+  #primers,#newTop,#newBot{transition:opacity .4s ease}
+  .stage-denature #topStrand,.stage-anneal #topStrand,.stage-extend #topStrand{transform:translateY(-15px)}
+  .stage-denature #botStrand,.stage-anneal #botStrand,.stage-extend #botStrand{transform:translateY(15px)}
+  .stage-anneal #primers,.stage-extend #primers{opacity:1}
+  .stage-extend #newTop,.stage-extend #newBot{opacity:.95}
+  /* population view */
+  .pcrpop .lane{display:flex;align-items:center;gap:10px;margin:12px 0}
+  .pcrpop .lane-l{flex:0 0 124px;font-family:"JetBrains Mono",monospace;font-size:10.5px;color:#9DB3AA;line-height:1.35}
+  .pcrpop .lane-l em{color:#6f857c;font-style:normal}
+  .pcrpop .lane-cells{flex:1;display:flex;flex-wrap:wrap;gap:3px;align-content:flex-start;min-height:20px}
+  .pcrpop .lane-n{flex:0 0 auto;font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;color:#F3F8F5;min-width:84px;text-align:right}
+  .lc{display:inline-block;height:8px;border-radius:3px}
+  .lc.long{width:26px;background:var(--C)}
+  .lc.short{width:9px;background:var(--m5C)}
+  .pop-note{font-family:"JetBrains Mono",monospace;font-size:11px;color:#9DB3AA;margin-top:12px;line-height:1.45}
+
+  .quiz{margin-top:22px;border:1px solid var(--line);border-radius:15px;padding:22px 24px;background:#fbfdfc}
+  .quiz h3{font-size:17px;margin:0 0 4px;font-weight:600;color:var(--ink)}
+  .quiz .q{margin-top:16px}
+  .quiz .q p.qtext{font-weight:600;margin:0 0 9px}
+  .opt{display:block;width:100%;text-align:left;border:1px solid var(--line);background:#fff;border-radius:10px;padding:11px 14px;margin:7px 0;cursor:pointer;font:inherit;font-size:14.5px;transition:border-color .12s,background .12s}
+  .opt:hover{border-color:var(--m5C)}
+  .opt:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+  .opt.correct{border-color:var(--ok);background:rgba(39,160,82,.08)}
+  .opt.wrong{border-color:var(--bad);background:rgba(224,83,61,.08)}
+  .opt.locked{cursor:default;pointer-events:none}
+  .explain{font-size:13.5px;color:var(--ink-soft);margin:8px 2px 0;display:none}
+  .explain.show{display:block}
+  .quizdone{margin-top:16px;font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--ok);display:none}
+  .quizdone.show{display:block}
+
+  .navrow{display:flex;justify-content:space-between;margin-top:30px;gap:12px}
+  .navrow button{font-weight:600;font-size:14px;border:1px solid var(--line);background:#fff;border-radius:10px;padding:11px 18px;cursor:pointer;color:var(--ink);font-family:"Space Grotesk"}
+  .navrow button:hover{border-color:var(--m5C);color:var(--m5C)}
+  .navrow button:disabled{opacity:.4;cursor:not-allowed}
+  .navrow button.next{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .navrow button.next:hover{background:var(--m5C);border-color:var(--m5C);color:#fff}
+  footer{border-top:1px solid var(--line);padding:26px 0;color:var(--ink-soft);font-size:13px}
+  .kbd{font-family:"JetBrains Mono",monospace;background:#fff;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12px}
+  :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+  .scrollhint{color:var(--m5C);font-weight:600;text-transform:none;letter-spacing:0}
+  /* ============ MOBILE / SMARTPHONE ============ */
+  @media(max-width:860px){
+    body{-webkit-text-size-adjust:100%}
+    .grid{gap:0}
+    nav.stepper{position:sticky;top:0;z-index:30;background:var(--paper);padding:10px 0 8px;box-shadow:0 6px 10px -8px rgba(0,0,0,.25)}
+    .stepper ol{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;scrollbar-width:none}
+    .stepper ol::-webkit-scrollbar{display:none}
+    .step{flex:0 0 auto;gap:8px;align-items:center;padding:9px 14px;border:1px solid var(--line);background:var(--card);border-radius:999px}
+    .step:hover{background:var(--card)}
+    .step .lab{white-space:nowrap;font-size:13.5px;line-height:1}
+    .step .sub{display:none}
+    .step .num{width:23px;height:23px;flex-basis:23px}
+    .step[aria-current="true"]{border-color:var(--m5C);background:#fff}
+    .progress{margin-top:10px}
+    main{padding-top:18px}
+    /* all diagrams fit the screen by default */
+    .diagram svg{width:100%;height:auto}
+  }
+  @media(max-width:560px){
+    .wrap{padding:0 16px}
+    header.hero{padding:30px 0 26px}
+    header.hero p.lede{font-size:16px;line-height:1.5}
+    .module h2{font-size:25px}
+    .module > p.intro{font-size:16.5px;line-height:1.55}
+    .panel{padding:18px 16px;border-radius:12px;margin-top:16px}
+    .panel p{font-size:16px}
+    .panel h3{font-size:12px}
+    .analogy{font-size:16px}
+    .diag-cap{font-size:13px}
+    /* pictorial diagrams: fit; dense ones: pan */
+    .panel.diagram.wide{overflow-x:auto;-webkit-overflow-scrolling:touch}
+    .panel.diagram.wide svg{width:100%;min-width:640px;height:auto}
+    /* conversion bench */
+    .bench-panel,.pcr-panel{padding:18px 15px}
+    .bench-panel .hint,.pcr-panel .hint{font-size:14.5px}
+    .arow{gap:6px}
+    .arow .rl{flex-basis:58px;width:58px;font-size:9.5px}
+    .arow .end{flex-basis:14px;width:14px}
+    .cells{gap:4px}
+    .nt{width:28px;height:35px;font-size:16px}
+    .readout{font-size:14.5px}
+    /* stepcards + flow: single column so the workflow reads top-to-bottom */
+    .flow{grid-template-columns:1fr}
+    .stepcard{padding:15px 16px}
+    .stepcard h4{font-size:16px}
+    .stepcard p{font-size:14.5px}
+    /* touch targets */
+    .opt{padding:14px 15px;min-height:48px;font-size:15.5px}
+    .btn{min-height:48px;font-size:15px}
+    .quiz{padding:20px 16px}
+    .quiz h3{font-size:17px}
+    .quiz .q p.qtext{font-size:16px}
+    .explain{font-size:14.5px}
+    .navrow{gap:8px}
+    .navrow button{flex:1;min-height:48px;font-size:13.5px;padding:12px 8px;text-align:center}
+    /* pcr */
+    .pcr-stats .big{font-size:32px}
+    .pcr-stats .copies{font-size:14px}
+    .pcrpop .lane-l{flex-basis:104px;font-size:11px}
+  }
+  @media(max-width:390px){
+    .wrap{padding:0 13px}
+    .legend{font-size:11px;gap:9px}
+    .nt{width:26px;height:33px;font-size:15px}
+    .arow .rl{flex-basis:52px;width:52px}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">RNA epitranscriptomics · m⁵C detection · interactive lab module</div>
+    <h1>The Conversion Bench</h1>
+    <p class="lede">From a frozen cell pellet to a chromatogram peak that says "methylated." Walk the real RNA bisulfite-sequencing workflow one decision at a time — and meet the single chemical trick the whole field rests on: an unmethylated cytosine deaminates, a methylated one refuses.</p>
+    <div class="legend" aria-label="Base colour code">
+      <span><i class="swatch" style="background:var(--A)"></i>A&nbsp;adenine</span>
+      <span><i class="swatch" style="background:var(--C)"></i>C&nbsp;cytosine</span>
+      <span><i class="swatch" style="background:var(--G)"></i>G&nbsp;guanine</span>
+      <span><i class="swatch" style="background:var(--U)"></i>U&nbsp;uracil</span>
+      <span><i class="swatch" style="background:var(--m5C)"></i>m⁵C&nbsp;methyl-C</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="grid">
+    <nav class="stepper" aria-label="Workflow steps">
+      <ol id="stepper"></ol>
+      <div class="progress">
+        <span id="progresslabel">0 / 6 modules cleared</span>
+        <div class="bar"><i id="progressbar"></i></div>
+      </div>
+    </nav>
+    <main id="main"></main>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    Built as an intro teaching module. Use <span class="kbd">←</span> <span class="kbd">→</span> to move between steps. Clear a module's quiz to light its marker green.
+  </div>
+</footer>
+
+<script>
+/* =========================================================
+   DIAGRAM HELPERS
+   ========================================================= */
+
+/* --- pyrimidine ring builder for the bisulfite mechanism --- */
+function pyr(cx,cy,o){
+  const R=28, dx=24, dy=14;
+  const v={
+    C4:[cx,cy-R], N3:[cx+dx,cy-dy], C2:[cx+dx,cy+dy],
+    N1:[cx,cy+R], C6:[cx-dx,cy+dy], C5:[cx-dx,cy-dy]
+  };
+  const L=(a,b,col="var(--ink)",w=1.8)=>`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${col}" stroke-width="${w}"/>`;
+  const DBL=(a,b,col="var(--ink)")=>{const ddx=b[0]-a[0],ddy=b[1]-a[1],m=Math.hypot(ddx,ddy),ox=-ddy/m*2.4,oy=ddx/m*2.4;
+    return L([a[0]+ox,a[1]+oy],[b[0]+ox,b[1]+oy],col)+L([a[0]-ox,a[1]-oy],[b[0]-ox,b[1]-oy],col);};
+  let s="";
+  // ring skeleton
+  s+=L(v.N1,v.C2)+L(v.C2,v.N3)+L(v.N3,v.C4)+L(v.C4,v.C5)+L(v.C5,v.C6)+L(v.C6,v.N1);
+  // 5,6 double bond (inner parallel) when present
+  if(!o.sat56) s+=L([v.C5[0]+4,v.C5[1]+2],[v.C6[0]+4,v.C6[1]-2],"var(--ink)",1.6);
+  // ring N atoms
+  const atom=(p,t)=>`<circle cx="${p[0]}" cy="${p[1]}" r="8.5" fill="var(--card)"/><text x="${p[0]}" y="${p[1]+4}" text-anchor="middle" font-family="JetBrains Mono" font-size="12" font-weight="700" fill="var(--ink)">${t}</text>`;
+  s+=atom(v.N1,"N")+atom(v.N3,"N");
+  // tiny 5 / 6 position numerals
+  s+=`<text x="${cx-13}" y="${cy-8}" font-family="JetBrains Mono" font-size="7.5" fill="#9aa9a1">5</text>`;
+  s+=`<text x="${cx-13}" y="${cy+13}" font-family="JetBrains Mono" font-size="7.5" fill="#9aa9a1">6</text>`;
+  // C2 carbonyl (=O) lower-right
+  s+=DBL(v.C2,[v.C2[0]+15,v.C2[1]+11],"var(--U)");
+  s+=`<text x="${v.C2[0]+22}" y="${v.C2[1]+18}" font-family="JetBrains Mono" font-size="12" font-weight="700" fill="var(--U)">O</text>`;
+  // N1-R (ribose) bond down
+  s+=L(v.N1,[v.N1[0],v.N1[1]+14]);
+  s+=`<text x="${v.N1[0]}" y="${v.N1[1]+26}" text-anchor="middle" font-family="JetBrains Mono" font-size="10.5" fill="var(--ink-soft)">R</text>`;
+  // C4 substituent: NH2 (amine, single) or =O (carbonyl, double)
+  if(o.c4==="NH2"){ s+=L(v.C4,[v.C4[0],v.C4[1]-14],"var(--C)"); s+=`<text x="${v.C4[0]}" y="${v.C4[1]-18}" text-anchor="middle" font-family="JetBrains Mono" font-size="12" font-weight="700" fill="var(--C)">NH₂</text>`; }
+  else { s+=DBL(v.C4,[v.C4[0],v.C4[1]-14],"var(--U)"); s+=`<text x="${v.C4[0]}" y="${v.C4[1]-18}" text-anchor="middle" font-family="JetBrains Mono" font-size="12" font-weight="700" fill="var(--U)">O</text>`; }
+  // C5 substituent
+  if(o.c5==="CH3"){ s+=L(v.C5,[v.C5[0]-15,v.C5[1]-10],"var(--m5C)",2.4); s+=`<text x="${v.C5[0]-26}" y="${v.C5[1]-13}" text-anchor="middle" font-family="JetBrains Mono" font-size="11" font-weight="700" fill="var(--m5C)">CH₃</text>`; }
+  // C6 substituent (bisulfite adduct)
+  if(o.c6==="SO3"){ s+=L(v.C6,[v.C6[0]-15,v.C6[1]+10],"var(--G)",2.4); s+=`<text x="${v.C6[0]-30}" y="${v.C6[1]+16}" text-anchor="middle" font-family="JetBrains Mono" font-size="11" font-weight="700" fill="var(--G)">SO₃⁻</text>`; }
+  // structure label
+  s+=`<text x="${cx}" y="${cy+R+30}" text-anchor="middle" font-family="Space Grotesk" font-size="11.5" font-weight="600" fill="var(--ink)">${o.label}</text>`;
+  if(o.sub) s+=`<text x="${cx}" y="${cy+R+45}" text-anchor="middle" font-family="IBM Plex Sans" font-size="10" fill="var(--ink-soft)">${o.sub}</text>`;
+  return s;
+}
+function rxnArrow(x1,x2,y,label,sub,blocked){
+  let s=`<line x1="${x1}" y1="${y}" x2="${x2-7}" y2="${y}" stroke="${blocked?'var(--ink-soft)':'var(--ink)'}" stroke-width="1.8" ${blocked?'stroke-dasharray="5 4"':''} marker-end="url(#mech)"/>`;
+  s+=`<text x="${(x1+x2)/2}" y="${y-9}" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="${blocked?'var(--ink-soft)':'var(--ink)'}">${label}</text>`;
+  if(sub) s+=`<text x="${(x1+x2)/2}" y="${y+15}" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="var(--ink-soft)">${sub}</text>`;
+  if(blocked) s+=`<text x="${(x1+x2)/2}" y="${y+4}" text-anchor="middle" font-family="JetBrains Mono" font-size="15" font-weight="700" fill="var(--U)">✕</text>`;
+  return s;
+}
+function bisulfiteDiagram(){
+  const r1=120, r2=320;
+  const cx=[95,320,545,770];
+  let s=`<svg viewBox="0 0 880 420" role="img" aria-label="Bisulfite mechanism: cytosine sulfonation, deamination, desulfonation to uracil; m5C is blocked">`;
+  // row tags
+  s+=`<text x="14" y="60" font-family="JetBrains Mono" font-size="10" fill="var(--ink-soft)" transform="rotate(-90 14 60)">UNMETHYLATED C</text>`;
+  s+=`<text x="14" y="262" font-family="JetBrains Mono" font-size="10" fill="var(--m5C)" transform="rotate(-90 14 262)">METHYLATED m⁵C</text>`;
+  // ROW 1: cytosine -> uracil
+  s+=pyr(cx[0],r1,{c4:"NH2",c5:"H",c6:"H",sat56:false,label:"Cytosine"});
+  s+=rxnArrow(cx[0]+46,cx[1]-46,r1,"sulfonation","+ HSO₃⁻");
+  s+=pyr(cx[1],r1,{c4:"NH2",c5:"H",c6:"SO3",sat56:true,label:"Cytosine-6-sulfonate"});
+  s+=rxnArrow(cx[1]+46,cx[2]-46,r1,"deamination","− NH₃ (+H₂O)");
+  s+=pyr(cx[2],r1,{c4:"O",c5:"H",c6:"SO3",sat56:true,label:"Uracil-6-sulfonate"});
+  s+=rxnArrow(cx[2]+46,cx[3]-46,r1,"desulfonation","alkali, OH⁻");
+  s+=pyr(cx[3],r1,{c4:"O",c5:"H",c6:"H",sat56:false,label:"Uracil",sub:"sequences as T"});
+  // ROW 2: m5C blocked
+  s+=pyr(cx[0],r2,{c4:"NH2",c5:"CH3",c6:"H",sat56:false,label:"5-methylcytosine"});
+  s+=rxnArrow(cx[0]+46,cx[1]-46,r2,"sulfonation blocked","5-CH₃ shields C5–C6",true);
+  s+=pyr(cx[1],r2,{c4:"NH2",c5:"CH3",c6:"H",sat56:false,label:"5-methylcytosine",sub:"unchanged — sequences as C"});
+  s+=`<defs><marker id="mech" markerWidth="8" markerHeight="8" refX="6.5" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="var(--ink)"/></marker></defs></svg>`;
+  return s;
+}
+
+DIAG_purify = `<svg viewBox="0 0 680 252" role="img" aria-label="Microcentrifuge tube after acid phenol-chloroform extraction showing three phases, and a silica column alternative">
+  <defs>
+    <clipPath id="tubeClip"><path d="M80 60 L80 150 L114 224 L148 150 L148 60 Z"/></clipPath>
+    <linearGradient id="orgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E0617F"/><stop offset="1" stop-color="#C94E6E"/>
+    </linearGradient>
+  </defs>
+  <!-- open flip cap -->
+  <g transform="rotate(-32 80 56)">
+    <rect x="44" y="40" width="42" height="22" rx="10" fill="#e3ebe7" stroke="var(--line)" stroke-width="1.6"/>
+    <rect x="60" y="44" width="20" height="14" rx="6" fill="#cfdad4"/>
+  </g>
+  <!-- neck / rim -->
+  <rect x="76" y="48" width="76" height="16" rx="6" fill="#eef3f1" stroke="var(--line)" stroke-width="1.6"/>
+  <!-- liquid phases (clipped to tube interior) -->
+  <g clip-path="url(#tubeClip)">
+    <rect x="78" y="60" width="72" height="62" fill="#E6F0F4"/>            <!-- top: transparent aqueous -->
+    <rect x="78" y="122" width="72" height="9" fill="#F4F1E8"/>           <!-- middle: white interphase -->
+    <rect x="78" y="131" width="72" height="95" fill="url(#orgGrad)"/>    <!-- bottom: organic (pink) -->
+    <ellipse cx="100" cy="78" rx="9" ry="4" fill="#ffffff" opacity="0.45"/> <!-- glass highlight -->
+  </g>
+  <!-- tube outline -->
+  <path d="M80 60 L80 150 L114 224 L148 150 L148 60" fill="none" stroke="#7d8c85" stroke-width="2.2" stroke-linejoin="round"/>
+  <!-- graduation ticks + volume -->
+  <g stroke="#7d8c85" stroke-width="1.2" opacity="0.7">
+    <line x1="148" y1="84" x2="142" y2="84"/><line x1="148" y1="104" x2="142" y2="104"/><line x1="148" y1="124" x2="142" y2="124"/>
+  </g>
+  <text x="138" y="78" text-anchor="end" font-family="JetBrains Mono" font-size="8.5" fill="#7d8c85">1.5</text>
+  <!-- leader lines to labels -->
+  <line x1="150" y1="92"  x2="246" y2="78"  stroke="var(--line)" stroke-width="1.4"/>
+  <line x1="150" y1="126" x2="246" y2="128" stroke="var(--line)" stroke-width="1.4"/>
+  <line x1="138" y1="180" x2="246" y2="180" stroke="var(--line)" stroke-width="1.4"/>
+  <text x="252" y="74"  font-family="JetBrains Mono" font-size="12.5" font-weight="700" fill="#2f6fed">Top — aqueous phase</text>
+  <text x="252" y="90"  font-family="IBM Plex Sans" font-size="11.5" fill="var(--ink-soft)">RNA is mainly here; transfer this layer</text>
+  <text x="252" y="124" font-family="JetBrains Mono" font-size="12.5" font-weight="700" fill="#5a6b62">Middle — white interphase</text>
+  <text x="252" y="140" font-family="IBM Plex Sans" font-size="11.5" fill="var(--ink-soft)">DNA and a small amount of protein</text>
+  <text x="252" y="176" font-family="JetBrains Mono" font-size="12.5" font-weight="700" fill="#C94E6E">Bottom — organic phase</text>
+  <text x="252" y="192" font-family="IBM Plex Sans" font-size="11.5" fill="var(--ink-soft)">proteins and other impurities</text>
+  <text x="114" y="244" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--ink-soft)">acid phenol–chloroform</text>
+  <!-- silica column alternative -->
+  <text x="555" y="56" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--ink-soft)">— or silica column —</text>
+  <rect x="515" y="72" width="80" height="120" rx="8" fill="#fff" stroke="var(--line)" stroke-width="2"/>
+  <rect x="515" y="118" width="80" height="9" fill="var(--m5C)" opacity="0.5"/>
+  <circle cx="535" cy="96" r="4" fill="var(--C)"/><circle cx="555" cy="102" r="4" fill="var(--C)"/><circle cx="573" cy="94" r="4" fill="var(--C)"/>
+  <text x="555" y="148" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="var(--ink-soft)">silica</text>
+  <text x="555" y="162" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="var(--ink-soft)">membrane</text>
+  <text x="555" y="210" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--ink-soft)">bind · wash · elute</text>
+</svg>`;
+
+DIAG_mrna = `<svg viewBox="0 0 680 250" role="img" aria-label="Oligo-dT bead capturing mRNA poly-A tail while other RNAs wash away">
+  <circle cx="120" cy="135" r="50" fill="var(--m5C)" opacity="0.12" stroke="var(--m5C)" stroke-width="1.5"/>
+  <text x="120" y="139" text-anchor="middle" font-family="Space Grotesk" font-size="14" font-weight="700" fill="var(--m5C)">bead</text>
+  <text x="120" y="200" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--ink-soft)">oligo-dT</text>
+  <g font-family="JetBrains Mono" font-size="13" font-weight="700" fill="var(--U)">
+    <text x="168" y="120">T</text><text x="184" y="120">T</text><text x="200" y="120">T</text><text x="216" y="120">T</text>
+  </g>
+  <g font-family="JetBrains Mono" font-size="13" font-weight="700" fill="var(--A)">
+    <text x="168" y="138">A</text><text x="184" y="138">A</text><text x="200" y="138">A</text><text x="216" y="138">A</text>
+  </g>
+  <line x1="170" y1="125" x2="216" y2="125" stroke="#9aa9a1" stroke-dasharray="2 3"/>
+  <path d="M232 135 H360" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/>
+  <text x="300" y="158" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--ink-soft)">mRNA body</text>
+  <text x="196" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--A)">poly(A) tail</text>
+  <path d="M430 120 q14 -12 28 0" stroke="var(--ink-soft)" stroke-width="2.5" fill="none"/>
+  <path d="M430 120 q14 12 28 0" stroke="var(--ink-soft)" stroke-width="2.5" fill="none"/>
+  <text x="500" y="96"  font-family="JetBrains Mono" font-size="12" fill="var(--ink-soft)">rRNA · tRNA</text>
+  <text x="500" y="113" font-family="IBM Plex Sans" font-size="12" fill="var(--ink-soft)">no tail → washed away</text>
+  <text x="600" y="150" font-family="JetBrains Mono" font-size="22" fill="var(--ink-soft)">→</text>
+  <text x="615" y="172" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--ink-soft)">wash</text>
+  <!-- rRNA: anatomically shaped ribosome (large + small subunit) -->
+  <g stroke="var(--ink-soft)" stroke-width="1.1">
+    <!-- large subunit (60S): body + central protuberance + stalks -->
+    <g fill="#b7c4cd">
+      <ellipse cx="458" cy="178" rx="23" ry="14"/>
+      <ellipse cx="455" cy="165" rx="8" ry="7"/>
+      <ellipse cx="480" cy="171" rx="6" ry="5"/>
+      <ellipse cx="435" cy="172" rx="5" ry="4"/>
+    </g>
+    <!-- small subunit (40S): body + head + beak -->
+    <g fill="#d2dce2">
+      <ellipse cx="461" cy="200" rx="19" ry="11"/>
+      <ellipse cx="447" cy="194" rx="9" ry="6.5"/>
+    </g>
+    <!-- subunit interface / mRNA channel -->
+    <line x1="436" y1="189" x2="486" y2="189" stroke="#7d8c85" stroke-width="1" opacity="0.55" stroke-dasharray="3 2"/>
+  </g>
+  <text x="460" y="228" text-anchor="middle" font-family="JetBrains Mono" font-size="9.5" fill="var(--ink-soft)">rRNA (ribosome)</text>
+  <!-- tRNA: four-arm cloverleaf secondary structure -->
+  <g fill="#e9efed" stroke="var(--ink-soft)" stroke-width="1.3">
+    <ellipse cx="548" cy="172" rx="7" ry="17"/>                                  <!-- acceptor stem -->
+    <ellipse cx="531" cy="180" rx="16" ry="7" transform="rotate(-20 531 180)"/> <!-- D arm -->
+    <ellipse cx="565" cy="180" rx="16" ry="7" transform="rotate(20 565 180)"/>  <!-- TpsiC arm -->
+    <ellipse cx="548" cy="205" rx="7.5" ry="18"/>                               <!-- anticodon arm -->
+    <circle cx="548" cy="186" r="7"/>                                          <!-- junction -->
+  </g>
+  <!-- base-pair rungs on the two vertical stems -->
+  <g stroke="var(--ink-soft)" stroke-width="1">
+    <line x1="544" y1="166" x2="552" y2="166"/><line x1="544" y1="173" x2="552" y2="173"/>
+    <line x1="544" y1="196" x2="552" y2="196"/><line x1="544" y1="202" x2="552" y2="202"/>
+  </g>
+  <!-- 3' acceptor end + amino-acid attachment -->
+  <path d="M551 156 q9 -7 15 -4" fill="none" stroke="var(--ink-soft)" stroke-width="1.3"/>
+  <circle cx="568" cy="151" r="3.4" fill="var(--G)"/>
+  <text x="574" y="150" font-family="JetBrains Mono" font-size="8" fill="var(--G)">aa</text>
+  <text x="568" y="163" font-family="JetBrains Mono" font-size="7.5" fill="var(--ink-soft)">3′</text>
+  <!-- anticodon triplet -->
+  <g fill="var(--U)"><circle cx="543" cy="220" r="2.2"/><circle cx="548" cy="222" r="2.2"/><circle cx="553" cy="220" r="2.2"/></g>
+  <text x="548" y="236" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="var(--U)">anticodon</text>
+  <text x="548" y="247" text-anchor="middle" font-family="JetBrains Mono" font-size="9.5" fill="var(--ink-soft)">tRNA</text>
+</svg>`;
+
+function rtDiagram(){
+  // template RNA read 3'(left) -> 5'(right); cDNA synthesised 5'->3' left->right
+  const cols=[
+    {t:"A"},
+    {t:"U",hl:"var(--U)",tcol:"var(--U)"},   // former unmethylated C, now U
+    {t:"G"},
+    {t:"U"},
+    {t:"A"},
+    {t:"C",hl:"var(--m5C)",tcol:"var(--m5C)"},// surviving m5C, still C
+    {t:"G"},
+    {t:"U"}
+  ];
+  const pair={A:"T",U:"A",G:"C",C:"G"};
+  const baseCol=b=>b==="A"?"var(--A)":b==="C"?"var(--C)":b==="G"?"var(--G)":"var(--U)";
+  const cw=44,x0=120,yT=88,yC=146;
+  const n=cols.length,xEnd=x0+(n-1)*cw,frontier=6; // cols >=frontier not yet synthesised
+  let s=`<svg viewBox="0 0 700 232" role="img" aria-label="Reverse transcription detail: a primer anneals to the converted RNA template and reverse transcriptase extends a complementary cDNA strand 5-prime to 3-prime">`;
+  // column highlights
+  cols.forEach((c,i)=>{ if(c.hl) s+=`<rect x="${x0+i*cw-15}" y="62" width="30" height="104" rx="6" fill="${c.hl}" opacity="0.10"/>`; });
+  // extension-direction arrow (top)
+  s+=`<line x1="${x0+3*cw-12}" y1="50" x2="${xEnd+10}" y2="50" stroke="var(--ink)" stroke-width="2" marker-end="url(#rtx)"/>`;
+  s+=`<text x="${(x0+3*cw+xEnd)/2}" y="44" text-anchor="middle" font-family="JetBrains Mono" font-size="10.5" fill="var(--ink)">RT extends 5′→3′</text>`;
+  // template rail + labels
+  s+=`<line x1="${x0-14}" y1="${yT-16}" x2="${xEnd+14}" y2="${yT-16}" stroke="#9aa9a1" stroke-width="2"/>`;
+  s+=`<text x="${x0-20}" y="${yT-12}" text-anchor="end" font-family="JetBrains Mono" font-size="12" font-weight="700" fill="var(--ink-soft)">3′</text>`;
+  s+=`<text x="${xEnd+18}" y="${yT-12}" font-family="JetBrains Mono" font-size="12" font-weight="700" fill="var(--ink-soft)">5′</text>`;
+  s+=`<text x="${x0-20}" y="${yT-30}" font-family="IBM Plex Sans" font-size="11.5" fill="var(--ink-soft)">Template RNA (converted)</text>`;
+  // template letters
+  cols.forEach((c,i)=>{ s+=`<text x="${x0+i*cw}" y="${yT+5}" text-anchor="middle" font-family="JetBrains Mono" font-weight="700" font-size="18" fill="${c.tcol||baseCol(c.t)}">${c.t}</text>`; });
+  // pairing ticks (faded past the frontier)
+  cols.forEach((c,i)=>{ const op=i>=frontier?0.25:1; s+=`<line x1="${x0+i*cw}" y1="${yT+12}" x2="${x0+i*cw}" y2="${yC-14}" stroke="#9aa9a1" stroke-width="1.4" stroke-dasharray="2 3" opacity="${op}"/>`; });
+  // cDNA letters (faded past the frontier = not yet made)
+  cols.forEach((c,i)=>{ const cd=pair[c.t],op=i>=frontier?0.22:1; s+=`<text x="${x0+i*cw}" y="${yC+5}" text-anchor="middle" font-family="JetBrains Mono" font-weight="700" font-size="18" fill="${baseCol(cd)}" opacity="${op}">${cd}</text>`; });
+  // cDNA rail + labels
+  s+=`<line x1="${x0-14}" y1="${yC+16}" x2="${xEnd+14}" y2="${yC+16}" stroke="#9aa9a1" stroke-width="2"/>`;
+  s+=`<text x="${x0-20}" y="${yC+21}" text-anchor="end" font-family="JetBrains Mono" font-size="12" font-weight="700" fill="var(--ink-soft)">5′</text>`;
+  s+=`<text x="${xEnd+18}" y="${yC+21}" font-family="JetBrains Mono" font-size="12" font-weight="700" fill="var(--ink-soft)">3′</text>`;
+  s+=`<text x="${x0-20}" y="${yC+40}" font-family="IBM Plex Sans" font-size="11.5" fill="var(--ink-soft)">cDNA (new strand)</text>`;
+  // primer region (cols 0-2)
+  s+=`<rect x="${x0-15}" y="${yC-15}" width="${2*cw+30}" height="36" rx="8" fill="var(--A)" opacity="0.10" stroke="var(--A)" stroke-dasharray="4 3"/>`;
+  s+=`<text x="${x0+cw}" y="${yC+57}" text-anchor="middle" font-family="JetBrains Mono" font-size="10.5" fill="var(--A)">primer anneals here</text>`;
+  // RT enzyme at the growing frontier
+  const rx=x0+(frontier-0.5)*cw;
+  s+=`<circle cx="${rx}" cy="${(yT+yC)/2}" r="19" fill="var(--m5C)" opacity="0.16" stroke="var(--m5C)" stroke-width="1.5"/>`;
+  s+=`<text x="${rx}" y="${(yT+yC)/2+4}" text-anchor="middle" font-family="Space Grotesk" font-size="12" font-weight="700" fill="var(--m5C)">RT</text>`;
+  // right-side callouts
+  const lx=xEnd+34;
+  s+=`<circle cx="${lx+6}" cy="92" r="5" fill="var(--U)"/>`;
+  s+=`<text x="${lx+18}" y="89" font-family="IBM Plex Sans" font-size="11" fill="var(--ink)">U = unmethylated C</text>`;
+  s+=`<text x="${lx+18}" y="104" font-family="IBM Plex Sans" font-size="11" fill="var(--ink-soft)">→ cDNA A → reads T</text>`;
+  s+=`<circle cx="${lx+6}" cy="130" r="5" fill="var(--m5C)"/>`;
+  s+=`<text x="${lx+18}" y="127" font-family="IBM Plex Sans" font-size="11" fill="var(--ink)">C = m⁵C survived</text>`;
+  s+=`<text x="${lx+18}" y="142" font-family="IBM Plex Sans" font-size="11" fill="var(--ink-soft)">→ cDNA G → reads C</text>`;
+  s+=`<defs><marker id="rtx" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0 0 L9 4.5 L0 9 Z" fill="var(--ink)"/></marker></defs></svg>`;
+  return s;
+}
+var DIAG_rt = rtDiagram();
+
+function primerDiagram(){
+  const ref="AUGCAUCGAUGCCAUCGUACGUAC".split("");
+  // candidate = the C nearest the centre
+  let cand=-1,bd=99; ref.forEach((b,i)=>{ if(b==="C"){const d=Math.abs(i-12); if(d<bd){bd=d;cand=i;}} });
+  const cw=25, x0=42, yRef=66, yConv=104;
+  const fwd=[1,6], rev=[17,22]; // flank columns (inclusive)
+  const colOf=b=>b==="A"?"var(--A)":b==="C"?"var(--C)":b==="G"?"var(--G)":"var(--U)";
+  let s=`<svg viewBox="0 0 680 200" role="img" aria-label="Primers anneal to the converted cDNA, flanking but not overlapping the candidate cytosine">`;
+  // keep-clear box around candidate
+  s+=`<rect x="${x0+cand*cw-12}" y="46" width="${cw}" height="76" rx="7" fill="var(--m5C)" opacity="0.12" stroke="var(--m5C)" stroke-dasharray="4 4"/>`;
+  // row labels
+  s+=`<text x="36" y="${yRef+5}" text-anchor="end" font-family="JetBrains Mono" font-size="10" fill="var(--ink-soft)">REF</text>`;
+  s+=`<text x="36" y="${yConv+5}" text-anchor="end" font-family="JetBrains Mono" font-size="10" fill="var(--ink-soft)">cDNA</text>`;
+  ref.forEach((b,i)=>{
+    s+=`<text x="${x0+i*cw}" y="${yRef+5}" text-anchor="middle" font-family="JetBrains Mono" font-weight="700" font-size="16" fill="${colOf(b)}">${b}</text>`;
+    let cb=b,cc=colOf(b);
+    if(b==="C"){ if(i===cand){cb="C";cc="var(--m5C)";} else {cb="T";cc="var(--U)";} }
+    if(b==="U"){cb="A";cc="var(--A)";}            // converted cDNA strand: template U -> A in cDNA... keep teaching-simple: show converted READ
+    // simpler & consistent with bench: show converted strand bases (C->T unless m5C)
+    if(b==="U"){cb="U";cc="var(--U)";}
+    s+=`<text x="${x0+i*cw}" y="${yConv+5}" text-anchor="middle" font-family="JetBrains Mono" font-weight="700" font-size="16" fill="${cc}">${cb}</text>`;
+  });
+  // candidate label
+  s+=`<text x="${x0+cand*cw}" y="38" text-anchor="middle" font-family="JetBrains Mono" font-size="9.5" fill="var(--m5C)">candidate m⁵C — keep clear</text>`;
+  // forward primer arrow (5'->3', points right) under left flank
+  const fx1=x0+fwd[0]*cw-10, fx2=x0+fwd[1]*cw+10;
+  s+=`<line x1="${fx1}" y1="138" x2="${fx2}" y2="138" stroke="var(--A)" stroke-width="3" marker-end="url(#pf)"/>`;
+  s+=`<text x="${(fx1+fx2)/2}" y="156" text-anchor="middle" font-family="JetBrains Mono" font-size="10.5" fill="var(--A)">forward primer 5′→3′</text>`;
+  // reverse primer arrow (5'->3' on complement, points left) under right flank
+  const rx1=x0+rev[1]*cw+10, rx2=x0+rev[0]*cw-10;
+  s+=`<line x1="${rx1}" y1="138" x2="${rx2}" y2="138" stroke="var(--U)" stroke-width="3" marker-end="url(#pr)"/>`;
+  s+=`<text x="${(rx1+rx2)/2}" y="156" text-anchor="middle" font-family="JetBrains Mono" font-size="10.5" fill="var(--U)">reverse primer 5′→3′</text>`;
+  s+=`<text x="340" y="178" text-anchor="middle" font-family="IBM Plex Sans" font-size="11" fill="var(--ink-soft)">amplicon spans the candidate; neither primer touches it</text>`;
+  s+=`<defs>
+    <marker id="pf" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0 0 L9 4.5 L0 9 Z" fill="var(--A)"/></marker>
+    <marker id="pr" markerWidth="9" markerHeight="9" refX="2" refY="4.5" orient="auto"><path d="M9 0 L0 4.5 L9 9 Z" fill="var(--U)"/></marker>
+  </defs></svg>`;
+  return s;
+}
+
+/* =========================================================
+   CONTENT — 6 modules
+   ========================================================= */
+const MODULES = [
+  {
+    tag:"STEP 01", title:"Total RNA Purification", short:"Lyse, denature, capture",
+    intro:"Before you can ask whether a cytosine is methylated, you need clean, intact RNA. RNases — enzymes that shred RNA — are everywhere: on your skin, in the cell you just lysed. Step one is a chemistry that kills them on contact.",
+    diagram:DIAG_purify, diagramCap:"After acid phenol–chloroform extraction the tube holds three phases: a clear top aqueous layer (RNA), a thin white interphase (DNA + a little protein), and a pink organic layer (proteins, impurities). Transfer the top layer. A silica column is the spin-tube alternative.",
+    panels:[
+      {h:"The principle",html:`A chaotropic salt — <b>guanidinium thiocyanate</b> — floods the lysate, denaturing every protein at once, RNases included, while keeping nucleic acids in solution. From there you either split phases with acid phenol–chloroform (RNA stays in the upper aqueous layer; DNA and protein go to the interface/organic phase) or bind RNA to a <b>silica column</b> in high chaotropic salt, wash, and elute in water.`},
+      {a:true,html:`<b>Analogy.</b> Guanidinium is a bouncer that throws every protein out of the club the instant the doors open — so the RNA-shredding enzymes never get a chance to do their job. Acid pH then sorts the remaining guests: RNA goes left, DNA goes right.`},
+      {flow:[
+        {h:"Lyse + denature",p:"Guanidinium thiocyanate cracks cells and instantly inactivates RNases."},
+        {h:"Phase split / bind",p:"Acid phenol–chloroform partitions RNA to the aqueous phase, or silica binds it in high salt."},
+        {h:"Wash",p:"Ethanol washes strip salts, proteins, and small contaminants off the column."},
+        {h:"Elute",p:"Nuclease-free water releases purified total RNA. Check A260/280 ≈ 2.0."}
+      ]},
+      {ref:true,html:`Foundational method: Chomczynski & Sacchi, <i>Anal. Biochem.</i> 1987. <a href="https://doi.org/10.1006/abio.1987.9999" target="_blank" rel="noopener">doi:10.1006/abio.1987.9999</a>`}
+    ],
+    quiz:{title:"Check yourself — purification",
+      questions:[
+        {q:"Why is guanidinium thiocyanate added at the very first step?",
+         opts:["It selectively binds mRNA","It denatures proteins and instantly inactivates RNases","It methylates cytosines","It separates DNA by size"],correct:1,
+         exp:"RNases survive almost everything except rapid, total protein denaturation. The chaotrope neutralises them before they degrade your sample."},
+        {q:"After acid phenol–chloroform extraction, where is the RNA?",
+         opts:["The organic (lower) phase","The interface","The aqueous (upper) phase","Bound to the tube wall"],correct:2,
+         exp:"At acidic pH, RNA partitions into the upper aqueous phase while DNA and protein stay at the interface/organic phase."}
+      ]}
+  },
+  {
+    tag:"STEP 02", title:"mRNA Enrichment", short:"Fish out the poly-A tails",
+    intro:"Total RNA is ~80–90% ribosomal RNA. Messenger RNA — often your target for coding-region m⁵C — is a small minority (~1–5%). You enrich for it using the one feature mRNAs share and rRNA lacks: a poly-adenosine tail.",
+    diagram:DIAG_mrna, diagramCap:"Oligo-dT beads grab mRNA by its poly(A) tail; the tail-less rRNA and tRNA rinse away in the wash.",
+    panels:[
+      {h:"The principle",html:`Mature eukaryotic mRNAs carry a 3′ <b>poly(A) tail</b>. Beads coated with <b>oligo-dT</b> (a short stretch of T's) base-pair with that tail (A–T). The <b>bound fraction</b> is enriched mRNA; the <b>unbound flow-through</b> is everything without a tail — which is where non-poly(A) RNAs live.`},
+      {a:true,html:`<b>Analogy.</b> The poly-A tail is a strip of Velcro that only mRNAs wear. Dip oligo-dT Velcro beads into the mix: keep what sticks for the messages, keep the flow-through for everything else.`},
+      {flow:[
+        {h:"Bind",p:"Oligo-dT beads hybridise to mRNA poly(A) tails in high-salt buffer."},
+        {h:"Two fractions",p:"Bound = mRNA. Flow-through = non-poly(A) RNAs (negative selection)."},
+        {h:"Elute",p:"Low salt or heat melts the A–T duplex; purified mRNA comes off the beads."},
+        {h:"Choose by question",p:"Coding-region m⁵C → keep bound. Non-poly(A) targets → keep flow-through, or skip selection."}
+      ]}
+    ],
+    quiz:{title:"Check yourself — mRNA enrichment",
+      questions:[
+        {q:"What molecular feature lets oligo-dT beads capture mRNA specifically?",
+         opts:["The 5′ cap","The poly(A) tail","Internal m⁵C sites","The ribosome binding site"],correct:1,
+         exp:"Oligo-dT base-pairs with the 3′ poly(A) tail (A–T). rRNA and tRNA lack a poly-A tail."},
+        {q:"You want m⁵C on NON-polyadenylated RNAs. Which approach would LOSE your targets?",
+         opts:["Poly(A) selection as negative selection — keep the unbound flow-through","rRNA depletion","Standard poly(A) selection — keep the bound eluate","No enrichment (total RNA is already ~95% non-poly(A))"],correct:2,
+         exp:"Keeping the bound eluate discards exactly what you want. Non-poly(A) RNAs sit in the flow-through, so use poly(A) as negative selection, deplete rRNA, or skip enrichment — since poly(A) RNA is only ~1–5% of total RNA, the rest is already your population."}
+      ]}
+  },
+  {
+    tag:"STEP 03 · CORE", title:"Bisulfite Conversion", short:"C → U, but m⁵C survives",
+    intro:"This is the chemical heart of the method. Sodium bisulfite drives cytosine through three steps — sulfonation, deamination, desulfonation — ending at uracil. A 5-methyl group blocks the first step, so m⁵C never enters the pathway and stays a C. After conversion, every C left standing marks a methylation site. Build a strand on the bench and run the reaction; the reference, converted, and read rows stay aligned so you can read straight down each column.",
+    wide:true, diagram:bisulfiteDiagram(), diagramCap:"Top: cytosine is sulfonated at C6, deaminated (loses NH₃) to a uracil-sulfonate, then desulfonated under alkali to uracil — read as T. Bottom: the 5-CH₃ of m⁵C shields the C5–C6 bond, so sulfonation never starts and it stays C.",
+    bench:true,
+    panels:[
+      {h:"The chemistry, in three moves",html:`(1) <b>Sulfonation</b> — bisulfite adds across the C5–C6 double bond, giving cytosine-6-sulfonate. (2) <b>Hydrolytic deamination</b> — the C4 amino group leaves as ammonia, converting the ring to uracil-6-sulfonate. (3) <b>Desulfonation</b> under alkali removes the C6 sulfonate, restoring the 5,6 double bond and leaving <b>uracil</b>. The 5-methyl group of m⁵C sterically and electronically hinders step 1, so methylated cytosines never convert and read as C.`},
+      {a:true,html:`<b>Analogy.</b> Bisulfite is acid rain on a field of cytosine statues. Bare statues (unmethylated C) dissolve into uracil through three weathering stages. The statues wearing a methyl helmet (m⁵C) shrug off the first drop — the reaction can't even begin — so afterward only the helmeted ones are still standing.`},
+      {h:"RNA is fragile — handle with care",html:`RNA bisulfite conversion uses harsh, hot, acidic conditions that fragment RNA and can give incomplete conversion. An unmethylated spike-in control tells you conversion went to completion — it should read all-T. Without it, you can't tell a true m⁵C from an unconverted C.`},
+      {ref:true,html:`RNA bisulfite mapping of m⁵C: Schaefer et al., <i>NAR</i> 2009 (<a href="https://doi.org/10.1093/nar/gkn954" target="_blank" rel="noopener">doi:10.1093/nar/gkn954</a>); transcriptome-wide, Squires et al., <i>NAR</i> 2012 (<a href="https://doi.org/10.1093/nar/gks144" target="_blank" rel="noopener">doi:10.1093/nar/gks144</a>).`},
+      {story:true,h:"Story · Chemistry as a sequencing tool",html:`Bisulfite conversion was introduced by <b>Frommer et al., 1992</b> (<a href="https://doi.org/10.1073/pnas.89.5.1827" target="_blank" rel="noopener">PNAS, doi:10.1073/pnas.89.5.1827</a>) for DNA methylation. Its elegance: rather than build a fancier sequencer, it uses chemistry to translate an invisible mark — a methyl group — into a readable base change. The RNA version arrived nearly two decades later (<b>Schaefer et al., 2009</b>, <a href="https://doi.org/10.1093/nar/gkn954" target="_blank" rel="noopener">NAR, doi:10.1093/nar/gkn954</a>) because RNA barely survives the hot, acidic reaction — the fragility you meet in this very step.`},
+      {story:true,h:"Story · A modification that waited decades",html:`m⁵C was detected in tRNA and rRNA back in the 1970s, then sat largely ignored. The field only reignited once the m⁶A reader/writer/eraser machinery was uncovered around 2011 (<b>Jia et al., 2011</b>, <a href="https://doi.org/10.1038/nchembio.687" target="_blank" rel="noopener">Nat Chem Biol, doi:10.1038/nchembio.687</a>), which made "RNA modifications are dynamic and regulatory" credible. The lesson: a discovery often waits for the right tool — here, high-throughput sequencing — before anyone can see it.`}
+    ],
+    quiz:{title:"Check yourself — conversion",
+      questions:[
+        {q:"In which step does the 5-methyl group of m⁵C block the reaction?",
+         opts:["Sulfonation across the C5–C6 bond","Deamination at C4","Desulfonation under alkali","Reverse transcription"],correct:0,
+         exp:"The methyl sits on C5 and hinders bisulfite addition across the C5–C6 double bond — the first step. No sulfonation means no downstream deamination, so m⁵C stays C."},
+        {q:"After complete conversion, a position that still reads C was…",
+         opts:["An unmethylated cytosine","A methylated cytosine (m⁵C)","An adenine","A failed-reaction artifact"],correct:1,
+         exp:"Unmethylated C runs the full pathway to U (read as T). A surviving C means the 5-methyl group blocked sulfonation — that's your m⁵C call."}
+      ]}
+  },
+  {
+    tag:"STEP 04", title:"Reverse Transcription", short:"Copy fragile RNA into stable cDNA",
+    intro:"Bisulfite-converted RNA is a hot, acid-battered, single-stranded molecule that won't survive PCR and can't serve as a template for a DNA polymerase. Reverse transcriptase reads it once and writes a durable DNA copy — cDNA — locking in the conversion result before anything else touches the sample.",
+    wide:true, diagram:DIAG_rt, diagramCap:"A primer anneals to the converted RNA (3′→5′) and reverse transcriptase extends a complementary cDNA strand 5′→3′. A template U (former unmethylated C) pairs A and later reads T; a surviving m⁵C templates G and reads C.",
+    panels:[
+      {h:"The principle",html:`A primer (random hexamers, oligo-dT, or a gene-specific primer) anneals to the converted RNA; <b>reverse transcriptase</b> extends it, synthesising first-strand cDNA. Each template uracil directs an adenine in the cDNA, so the unmethylated-C signal — now a U — is permanently captured as a T-reading position. Surviving m⁵C still templates as C.`},
+      {a:true,html:`<b>Analogy.</b> The converted RNA is a wet, smudge-prone original that's already starting to tear. Reverse transcription photocopies it onto durable paper <b>before</b> it falls apart — every later step works from the sturdy copy, not the fragile original.`},
+      {flow:[
+        {h:"Prime",p:"Random hexamer, oligo-dT, or gene-specific primer anneals to the converted RNA."},
+        {h:"Extend",p:"Reverse transcriptase synthesises first-strand cDNA; U templates as A."},
+        {h:"Stabilise",p:"The result is double-strand-ready DNA that tolerates PCR thermal cycling."},
+        {h:"Preserve the call",p:"Unmethylated sites are fixed as T-reading; m⁵C stays C-reading."}
+      ]}
+    ],
+    quiz:{title:"Check yourself — reverse transcription",
+      questions:[
+        {q:"Why reverse transcribe the converted RNA into cDNA before PCR?",
+         opts:["To add methylation marks","RNA is unstable and a DNA polymerase needs a DNA template; RT makes stable cDNA","To remove the poly-A tail","To raise the melting temperature"],correct:1,
+         exp:"Standard PCR amplifies DNA. Converted RNA is fragile and single-stranded; RT copies it into durable cDNA that survives thermal cycling."},
+        {q:"A cytosine that was unmethylated (now a U in the RNA) will, after RT and sequencing, read as…",
+         opts:["C","G","T","A"],correct:2,
+         exp:"Unmethylated C → U during conversion; U templates an A in first-strand cDNA, so the position ultimately reads T. A surviving C means it was methylated."}
+      ]}
+  },
+  {
+    tag:"STEP 05", title:"Primer Design for Converted cDNA", short:"A C-depleted template changes the rules",
+    intro:"Conversion rewrote your template: most cytosines became uracil, then thymine in the cDNA. Primers designed against the original sequence won't bind. You design against the converted strand — and you keep the cytosine you're testing out of both primers.",
+    wide:true, diagram:primerDiagram(), diagramCap:"Design primers on the converted cDNA and place them in flanking regions. The candidate m⁵C (violet) sits inside the amplicon but outside both primers; arrows show each primer's 5′→3′ direction.",
+    panels:[
+      {h:"What changes after conversion",html:`The converted strand is <b>C-poor and T-rich</b>, because nearly every C turned into T. That lowers sequence complexity and melting temperature and makes mispriming easier. Two practical rules follow.`},
+      {a:true,html:`<b>Analogy.</b> Conversion translates your paragraph into a language with almost no letter "C." You can't reuse old primer "sentences" — you rewrite them in the new alphabet, and you avoid the few C's that remain, because their identity is exactly what you're measuring.`},
+      {flow:[
+        {h:"Design on the converted strand",p:"Use the expected post-conversion sequence (C→T everywhere unmethylated), not the genomic original."},
+        {h:"Avoid the C's you test",p:"Keep candidate m⁵C sites out of the primer-binding region so the primer doesn't dictate the readout."},
+        {h:"Expect lower Tm",p:"T-rich primers melt lower; design slightly longer primers to recover annealing temperature."},
+        {h:"Check specificity",p:"Reduced complexity raises mispriming risk — verify primers against the converted reference."}
+      ]},
+      {h:"Why not put an m⁵C site inside the primer?",html:`If your primer overlaps the very cytosine you're interrogating, the primer (a fixed sequence) force-feeds a base at that position regardless of the template's true state. You'd measure your primer, not the RNA.`}
+    ],
+    quiz:{title:"Check yourself — primer design",
+      questions:[
+        {q:"Compared to the original, the converted strand is generally…",
+         opts:["G-rich and high-Tm","C-poor and T-rich, with lower Tm","Identical in composition","All adenine"],correct:1,
+         exp:"Unmethylated C→U→T conversion strips out most cytosines, leaving a T-rich, lower-complexity, lower-Tm template."},
+        {q:"Why keep candidate m⁵C positions out of the primer-binding region?",
+         opts:["Primers anneal faster without C","A fixed primer sequence would override the readout at that base","It raises RNA yield","It removes the poly-A tail"],correct:1,
+         exp:"The primer's own bases would dictate that position, masking the template's true methylation state. You'd be reading the primer."}
+      ]}
+  },
+  {
+    tag:"STEP 06", title:"PCR & Read-out", short:"Amplify, then read C vs T",
+    intro:"With stable cDNA and converted-strand primers in hand, PCR amplifies the target region across repeating temperature steps, and sequencing reads each position. The methylation answer is one letter: C means methylated, T means it wasn't. Run a single cycle to see the three temperature steps, or fast-forward to watch the defined amplicon overtake the template pool.",
+    pcr:true,
+    panels:[
+      {h:"The principle",html:`Three temperatures repeat each cycle: <b>denature</b> (~95 °C, strands separate), <b>anneal</b> (~55 °C, primers bind), <b>extend</b> (~72 °C, polymerase copies). For the first two cycles a primer extends off one end into <b>run-off products of variable length</b>; only from cycle 3 does the <b>defined amplicon</b> — bounded by both primers — appear and then double every cycle. Sequencing reads each site: a <span style="color:var(--m5C);font-weight:700">C</span> survived conversion (m⁵C); a <span style="color:var(--U);font-weight:700">T</span> did not.`},
+      {a:true,html:`<b>Analogy.</b> The first cycles are like photocopying a page that's too long for the glass — you get smears running off the edge. Once both margins are set (both primers), every copy is the same trimmed page, and the copier runs it a billion times. The sequencer is the proofreader who circles every surviving "C."`},
+      {flow:[
+        {h:"Amplify",p:"PCR with converted-strand primers enriches the target locus from tiny input."},
+        {h:"Defined amplicon wins",p:"Run-off products grow linearly; the bounded amplicon grows as 2ⁿ and dominates."},
+        {h:"Sequence",p:"Sanger for single loci, NGS for transcriptome-wide maps."},
+        {h:"Call methylation",p:"At each site: C/(C+T) ratio = methylation level. 100% C = fully methylated."}
+      ]},
+      {h:"Reading the ratio",html:`Methylation is rarely all-or-none across a molecule pool. The fraction of reads showing C versus T gives a <b>methylation level</b> — e.g., 30 C : 70 T reads ≈ 30% methylated at that cytosine.`},
+      {story:true,h:"Story · How PCR was born",html:`PCR was conceived by <b>Kary Mullis</b> in 1983 — by his account, while driving a California highway one Friday night, crediting part of the idea to LSD. It won him the 1993 Nobel Prize in Chemistry (foundational paper: <b>Mullis & Faloona, 1987</b>, <a href="https://doi.org/10.1016/0076-6879(87)55023-6" target="_blank" rel="noopener">Methods Enzymol, doi:10.1016/0076-6879(87)55023-6</a>). Yet he later denied HIV causes AIDS and embraced astrology. The lesson: a world-changing technique and its inventor's judgment elsewhere can be fully decoupled — judge science on evidence, not the name attached.`},
+      {story:true,h:"Story · The man who won two Nobels",html:`Sanger sequencing is named for <b>Fred Sanger</b>, one of only two people to win the Nobel Prize in Chemistry twice — for protein sequencing (1958) and DNA sequencing (1980; method: <a href="https://doi.org/10.1073/pnas.74.12.5463" target="_blank" rel="noopener">Sanger et al., PNAS 1977, doi:10.1073/pnas.74.12.5463</a>). He called himself "just a chap who messed about in his lab," took almost no students, and kept doing the experiments himself — the opposite of the modern principal-investigator model.`}
+    ],
+    quiz:{title:"Check yourself — read-out",
+      questions:[
+        {q:"Why do fully-defined amplicons only appear from about cycle 3 onward?",
+         opts:["The polymerase is cold until then","Both primer-defined ends only exist once a strand made from a primer is itself copied","Sequencing starts at cycle 3","Denaturation fails in early cycles"],correct:1,
+         exp:"Cycle 1 gives run-off products from the original template; the bounded, defined-length amplicon needs a strand whose start was set by one primer to then be copied to the other primer — first possible at cycle 3."},
+        {q:"At one cytosine site you read 8 C and 2 T across reads. The methylation level is about…",
+         opts:["0%","20%","80%","100%"],correct:2,
+         exp:"C/(C+T) = 8/10 = 80%. Surviving C's are methylated; the ratio gives the methylation level across the pool."}
+      ]}
+  }
+];
+
+/* =========================================================
+   STATE + RENDER
+   ========================================================= */
+const state={active:0,cleared:new Array(MODULES.length).fill(false)};
+const stepperEl=document.getElementById('stepper');
+const mainEl=document.getElementById('main');
+
+function renderStepper(){
+  stepperEl.innerHTML=MODULES.map((m,i)=>`
+    <li class="step ${state.cleared[i]?'done':''}" data-i="${i}" role="button" tabindex="0" aria-current="${i===state.active}">
+      <span class="num">${state.cleared[i]?'✓':String(i+1).padStart(2,'0')}</span>
+      <span class="lab">${m.title}<span class="sub">${m.short}</span></span>
+    </li>`).join('');
+  stepperEl.querySelectorAll('.step').forEach(s=>{
+    const go=()=>setActive(+s.dataset.i);
+    s.addEventListener('click',go);
+    s.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});
+  });
+  const n=state.cleared.filter(Boolean).length;
+  document.getElementById('progresslabel').textContent=`${n} / ${MODULES.length} modules cleared`;
+  document.getElementById('progressbar').style.width=(n/MODULES.length*100)+'%';
+}
+
+function panelHTML(p){
+  if(p.a) return `<div class="panel"><div class="analogy">${p.html}</div></div>`;
+  if(p.flow) return `<div class="panel"><h3>The workflow</h3><div class="flow">${
+    p.flow.map((s,i)=>`<div class="stepcard"><div class="n">${String(i+1).padStart(2,'0')}</div><h4>${s.h}</h4><p>${s.p}</p></div>`).join('')}</div></div>`;
+  if(p.story) return `<div class="panel story"><h3>${p.h}</h3><p>${p.html}</p></div>`;
+  if(p.ref) return `<p class="ref">${p.html}</p>`;
+  return `<div class="panel"><h3>${p.h}</h3><p>${p.html}</p></div>`;
+}
+function diagramHTML(m){
+  if(!m.diagram) return '';
+  return `<div class="panel diagram ${m.wide?'wide':''}"><h3>Diagram${m.wide?' <span class="scrollhint">· swipe to pan</span>':''}</h3>${m.diagram}${m.diagramCap?`<p class="diag-cap">${m.diagramCap}</p>`:''}</div>`;
+}
+function quizHTML(q,mi){
+  return `<div class="quiz"><h3>${q.title}</h3>
+    ${q.questions.map((item,qi)=>`
+      <div class="q" data-mi="${mi}" data-qi="${qi}">
+        <p class="qtext">${qi+1}. ${item.q}</p>
+        ${item.opts.map((o,oi)=>`<button class="opt" data-oi="${oi}">${o}</button>`).join('')}
+        <p class="explain"></p>
+      </div>`).join('')}
+    <p class="quizdone">✓ Module cleared</p></div>`;
+}
+function benchHTML(){
+  return `<div class="bench-panel">
+    <h3>The conversion bench — run it yourself</h3>
+    <p class="hint">Click any <b style="color:var(--C)">blue C</b> on the REFERENCE row to methylate it (it turns violet — that's m⁵C). Then add bisulfite; the CONVERTED row appears column-aligned right beneath it, and the cDNA READ row follows.</p>
+    <div class="align" id="align"></div>
+    <div class="benchctl">
+      <button class="btn primary" id="convertBtn">Add bisulfite →</button>
+      <button class="btn" id="readBtn" disabled>Reverse transcribe + read →</button>
+      <button class="btn ghost" id="resetBtn">Reset strand</button>
+      <span class="stagelab" id="stagelab">STAGE · EDIT</span>
+    </div>
+    <div class="readout" id="readout">Methylate a few cytosines, then add bisulfite to watch unmethylated C deaminate to U.</div>
+  </div>`;
+}
+function pcrHTML(){
+  return `<div class="pcr-panel">
+    <h3>PCR cycle simulator</h3>
+    <p class="hint" style="color:#9DB3AA;font-size:13.5px;margin:0 0 14px">Run one cycle to see denature → anneal → extend. Fast-forward to 30 to watch the <b style="color:var(--m5C)">defined amplicon</b> grow exponentially while the <b style="color:var(--C)">template + run-off</b> pool only grows linearly.</p>
+    <div class="pcr-top">
+      <div>
+        <div class="pcrstage" id="pcrStage">
+          <svg class="pcrsvg" viewBox="0 0 360 130" role="img" aria-label="DNA duplex denaturing, primers annealing, polymerase extending">
+            <rect id="topStrand" x="40" y="55" width="280" height="9" rx="4.5" fill="var(--C)"/>
+            <rect id="botStrand" x="40" y="66" width="280" height="9" rx="4.5" fill="var(--A)"/>
+            <g id="primers" opacity="0">
+              <rect x="40" y="40" width="46" height="8" rx="4" fill="var(--G)"/>
+              <rect x="274" y="82" width="46" height="8" rx="4" fill="var(--G)"/>
+            </g>
+            <rect id="newBot" x="40" y="40" width="280" height="8" rx="4" fill="var(--m5C)" opacity="0"/>
+            <rect id="newTop" x="40" y="82" width="280" height="8" rx="4" fill="var(--m5C)" opacity="0"/>
+          </svg>
+        </div>
+        <div class="pcrpop" id="pcrPop" hidden>
+          <div class="lane"><span class="lane-l">Template + run-off<br><em>long, variable</em></span><div class="lane-cells" id="laneLong"></div><span class="lane-n" id="longN">1</span></div>
+          <div class="lane"><span class="lane-l">Defined amplicon<br><em>both primers</em></span><div class="lane-cells" id="laneShort"></div><span class="lane-n" id="shortN">0</span></div>
+          <p class="pop-note" id="popNote"></p>
+        </div>
+      </div>
+      <div class="pcr-stats">
+        <div class="lbl">Cycle</div>
+        <div class="big"><span id="cycleNum">0</span> <span style="font-size:.5em;color:#7FE0B0">/ 30</span></div>
+        <div class="copies">Total target copies ≈ 2<sup id="expN">0</sup> = <b id="copyCount">1</b></div>
+        <div class="pcr-bar"><i id="pcrBar"></i></div>
+        <div class="phase" id="phaseLabel"><span class="dot" style="background:#3a4b45"></span>idle — ready to cycle</div>
+      </div>
+    </div>
+    <div class="pcrctl">
+      <button class="btn primary" id="cycleBtn">Run one cycle</button>
+      <button class="btn" id="runBtn">Fast-forward to 30</button>
+      <button class="btn ghost" id="pcrReset">Reset</button>
+    </div>
+    <p class="pcr-note">Note: real PCR is not infinite. After ~25–35 cycles reagents deplete and amplification plateaus — the 2ⁿ curve is the early, exponential ideal.</p>
+  </div>`;
+}
+
+function renderModule(){
+  const m=MODULES[state.active];
+  mainEl.innerHTML=MODULES.map((mod,i)=>{
+    const body=`
+      <div class="modhead"><span class="tag">${mod.tag}</span></div>
+      <h2>${mod.title}</h2>
+      <p class="intro">${mod.intro}</p>
+      ${diagramHTML(mod)}
+      ${mod.bench?benchHTML():''}
+      ${mod.pcr?pcrHTML():''}
+      ${mod.panels.map(panelHTML).join('')}
+      ${quizHTML(mod.quiz,i)}
+      <div class="navrow">
+        <button class="prev" ${i===0?'disabled':''}>← ${i===0?'Start':MODULES[i-1].title}</button>
+        <button class="next" ${i===MODULES.length-1?'disabled':''}>${i===MODULES.length-1?'End of workflow':MODULES[i+1].title+' →'}</button>
+      </div>`;
+    return `<section class="module ${i===state.active?'active':''}" data-i="${i}">${body}</section>`;
+  }).join('');
+
+  mainEl.querySelectorAll('.q').forEach(qEl=>{
+    const mi=+qEl.dataset.mi,qi=+qEl.dataset.qi;
+    const item=MODULES[mi].quiz.questions[qi];
+    const explain=qEl.querySelector('.explain');
+    qEl.querySelectorAll('.opt').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        if(qEl.dataset.answered)return;
+        qEl.dataset.answered='1';
+        const oi=+btn.dataset.oi;
+        qEl.querySelectorAll('.opt').forEach(b=>b.classList.add('locked'));
+        if(oi===item.correct){btn.classList.add('correct');}
+        else{btn.classList.add('wrong');qEl.querySelectorAll('.opt')[item.correct].classList.add('correct');}
+        explain.textContent=item.exp;explain.classList.add('show');
+        checkQuizComplete(mi);
+      });
+    });
+  });
+
+  const sec=mainEl.querySelector('.module.active');
+  sec.querySelector('.prev')?.addEventListener('click',()=>setActive(state.active-1));
+  sec.querySelector('.next')?.addEventListener('click',()=>setActive(state.active+1));
+
+  if(m.bench) initBench();
+  if(m.pcr) initPCR();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function checkQuizComplete(mi){
+  const sec=mainEl.querySelector(`.module[data-i="${mi}"]`);
+  const qs=sec.querySelectorAll('.q');
+  if([...qs].filter(q=>q.dataset.answered).length===qs.length){
+    sec.querySelector('.quizdone').classList.add('show');
+    if(!state.cleared[mi]){state.cleared[mi]=true;renderStepper();}
+  }
+}
+function setActive(i){if(i<0||i>=MODULES.length)return;state.active=i;renderStepper();renderModule();}
+
+/* =========================================================
+   CONVERSION BENCH (aligned reference / converted / read)
+   ========================================================= */
+const SEQ="AUCGCAUCCGAACGUCGCAUC".split("");
+let bench;
+function initBench(){
+  bench={bases:SEQ.map(b=>({base:b,methyl:false})),stage:"edit"};
+  drawBench();
+  const cBtn=document.getElementById('convertBtn'),rBtn=document.getElementById('readBtn');
+  cBtn.disabled=false;rBtn.disabled=true;
+  document.getElementById('stagelab').textContent="STAGE · EDIT";
+  document.getElementById('readout').innerHTML="Methylate a few cytosines, then add bisulfite to watch unmethylated C deaminate to U.";
+  cBtn.onclick=convert;rBtn.onclick=readResult;document.getElementById('resetBtn').onclick=initBench;
+}
+function cell(base,opts={}){
+  const cls=opts.cls||base;
+  return `<div class="nt ${cls} ${opts.clickable?'clickable':''} ${opts.ghost?'ghost':''} ${opts.flip?'flip':''}" ${opts.i!==undefined?`data-i="${opts.i}"`:''}>${base}${opts.label?`<small>${opts.label}</small>`:''}</div>`;
+}
+function drawBench(){
+  const showConv=bench.stage==="converted"||bench.stage==="read";
+  const showRead=bench.stage==="read";
+  const refCells=bench.bases.map((b,i)=>{
+    if(b.base==="C"&&b.methyl) return cell("C",{cls:"m5C",label:"m⁵C",i,clickable:bench.stage==="edit"});
+    return cell(b.base,{i,clickable:bench.stage==="edit"&&b.base==="C"});
+  }).join('');
+  const convCells=bench.bases.map(b=>{
+    if(!showConv) return cell(b.base,{ghost:true});
+    if(b.base==="C"&&b.methyl) return cell("C",{cls:"m5C",label:"m⁵C"});
+    if(b.base==="C"&&!b.methyl) return cell("U",{cls:"U",flip:true});
+    return cell(b.base);
+  }).join('');
+  const readCells=bench.bases.map(b=>{
+    if(!showRead) return cell(b.base,{ghost:true});
+    if(b.base==="C"&&b.methyl) return cell("C",{cls:"callC"});
+    if(b.base==="C"&&!b.methyl) return cell("T",{cls:"callT"});
+    if(b.base==="U") return cell("T",{cls:"T"});
+    return cell(b.base);
+  }).join('');
+
+  document.getElementById('align').innerHTML=`
+    <div class="arow"><span class="rl">REFERENCE</span><span class="end">5′</span><div class="cells">${refCells}</div><span class="end">3′</span></div>
+    <div class="arow"><span class="rl">CONVERTED</span><span class="end">5′</span><div class="cells">${convCells}</div><span class="end">3′</span></div>
+    <div class="arow"><span class="rl">cDNA READ</span><span class="end"></span><div class="cells">${readCells}</div><span class="end"></span></div>`;
+
+  if(bench.stage==="edit"){
+    document.querySelectorAll('#align .nt.clickable').forEach(n=>{
+      n.addEventListener('click',()=>{const i=+n.dataset.i;bench.bases[i].methyl=!bench.bases[i].methyl;drawBench();});
+    });
+  }
+}
+function convert(){
+  bench.stage="converted";drawBench();
+  document.getElementById('convertBtn').disabled=true;
+  document.getElementById('readBtn').disabled=false;
+  document.getElementById('stagelab').textContent="STAGE · CONVERTED";
+  const surv=bench.bases.filter(b=>b.base==="C"&&b.methyl).length;
+  document.getElementById('readout').innerHTML=`Bisulfite added. Unmethylated cytosines ran the full pathway to <b style="color:var(--U)">U</b> (CONVERTED row). <b>${surv}</b> cytosine${surv===1?'':'s'} survived — those carried a methyl helmet (m⁵C). Now reverse transcribe and read.`;
+}
+function readResult(){
+  bench.stage="read";drawBench();
+  document.getElementById('readBtn').disabled=true;
+  document.getElementById('stagelab').textContent="STAGE · READ-OUT";
+  const methPos=bench.bases.map((b,i)=>(b.base==="C"&&b.methyl)?i+1:null).filter(x=>x);
+  document.getElementById('readout').innerHTML= methPos.length
+    ? `In the cDNA READ row, every <b class="callC">C</b> is a methylation call (m⁵C) at position${methPos.length>1?'s':''} ${methPos.join(', ')}. Every <b class="callT">T</b> was an unmethylated cytosine. That one-letter difference is your entire result.`
+    : `No cytosine survived — you didn't methylate any. The READ row is all-T at the cytosine sites: exactly what a fully-unmethylated control should look like.`;
+}
+
+/* =========================================================
+   PCR SIMULATOR
+   ========================================================= */
+let pcr;
+const PHASES=[
+  {cls:"stage-denature",name:"Denaturation 95 °C — strands separate",color:"var(--U)"},
+  {cls:"stage-anneal",  name:"Annealing 55 °C — primers bind",       color:"var(--C)"},
+  {cls:"stage-extend",  name:"Extension 72 °C — polymerase copies",  color:"var(--A)"}
+];
+function fmt(n){return n.toLocaleString('en-US');}
+function reduceMotion(){return window.matchMedia('(prefers-reduced-motion:reduce)').matches;}
+function initPCR(){
+  pcr={cycle:0,busy:false};
+  showDuplex();
+  updatePCRStats();
+  setPhase(-1);
+  document.getElementById('cycleBtn').onclick=()=>runCycle();
+  document.getElementById('pcrReset').onclick=initPCR;
+  document.getElementById('runBtn').onclick=fastForward;
+}
+function showDuplex(){document.getElementById('pcrStage').hidden=false;document.getElementById('pcrPop').hidden=true;}
+function showPop(){document.getElementById('pcrStage').hidden=true;document.getElementById('pcrPop').hidden=false;}
+function setPhase(idx){
+  const stage=document.getElementById('pcrStage');
+  const label=document.getElementById('phaseLabel');
+  stage.classList.remove('stage-denature','stage-anneal','stage-extend');
+  if(idx<0){label.innerHTML=`<span class="dot" style="background:#3a4b45"></span>idle — ready to cycle`;return;}
+  const p=PHASES[idx];
+  stage.classList.add(p.cls);
+  label.innerHTML=`<span class="dot" style="background:${p.color}"></span>${p.name}`;
+}
+function updatePCRStats(){
+  document.getElementById('cycleNum').textContent=pcr.cycle;
+  document.getElementById('expN').textContent=pcr.cycle;
+  document.getElementById('copyCount').textContent=fmt(Math.pow(2,pcr.cycle));
+  document.getElementById('pcrBar').style.width=(pcr.cycle/30*100)+'%';
+}
+function runCycle(done){
+  if(pcr.busy||pcr.cycle>=30){done&&done();return;}
+  showDuplex();
+  pcr.busy=true;
+  const btns=[document.getElementById('cycleBtn'),document.getElementById('runBtn')];
+  btns.forEach(b=>b.disabled=true);
+  if(reduceMotion()){
+    pcr.cycle++;updatePCRStats();setPhase(-1);pcr.busy=false;btns.forEach(b=>b.disabled=false);done&&done();return;
+  }
+  setPhase(0);
+  setTimeout(()=>setPhase(1),440);
+  setTimeout(()=>setPhase(2),880);
+  setTimeout(()=>{
+    pcr.cycle++;updatePCRStats();setPhase(-1);
+    pcr.busy=false;btns.forEach(b=>b.disabled=false);done&&done();
+  },1440);
+}
+/* accurate-ish population model:
+   long  = original template + single-primer run-off products  -> grows linearly (~1 + 2n)
+   short = defined amplicon bounded by both primers            -> total(2^n) minus long */
+function drawPopulation(){
+  const n=pcr.cycle;
+  const total=Math.pow(2,n);
+  const long=1+2*n;
+  const short=Math.max(0,total-long);
+  document.getElementById('longN').textContent=fmt(long);
+  document.getElementById('shortN').textContent=fmt(short);
+  document.getElementById('laneLong').innerHTML=Array.from({length:Math.min(long,10)},()=>'<i class="lc long"></i>').join('');
+  document.getElementById('laneShort').innerHTML=Array.from({length:Math.min(short,80)},()=>'<i class="lc short"></i>').join('');
+  const note=document.getElementById('popNote');
+  if(short<=0) note.textContent='Cycles 1–2: only template + single-primer run-off (long, variable length). No fully-defined amplicon exists yet.';
+  else note.textContent='From cycle 3 the defined amplicon (bounded by both primers) appears and doubles each cycle — soon overwhelming the linear template + run-off pool.';
+}
+function fastForward(){
+  if(pcr.busy)return;
+  pcr.busy=true;
+  showPop();
+  document.getElementById('phaseLabel').innerHTML='<span class="dot" style="background:var(--m5C)"></span>population view — exponential amplicon vs linear template';
+  const btns=[document.getElementById('cycleBtn'),document.getElementById('runBtn')];
+  btns.forEach(b=>b.disabled=true);
+  const rm=reduceMotion();
+  const finish=()=>{pcr.busy=false;btns.forEach(b=>b.disabled=false);};
+  if(rm){pcr.cycle=30;updatePCRStats();drawPopulation();finish();return;}
+  const tick=()=>{
+    if(pcr.cycle>=30){finish();return;}
+    pcr.cycle++;updatePCRStats();drawPopulation();
+    setTimeout(tick,70);
+  };
+  tick();
+}
+
+/* =========================================================
+   INIT + KEYBOARD
+   ========================================================= */
+renderStepper();renderModule();
+document.addEventListener('keydown',e=>{
+  if(['INPUT','TEXTAREA','BUTTON'].includes(document.activeElement.tagName))return;
+  if(e.key==='ArrowRight')setActive(state.active+1);
+  if(e.key==='ArrowLeft')setActive(state.active-1);
+});
+</script>
+</body>
+</html>
