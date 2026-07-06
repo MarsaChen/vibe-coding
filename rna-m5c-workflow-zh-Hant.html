@@ -1,0 +1,1032 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>轉換工作檯 — RNA m⁵C：從純化到 PCR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EAEFEE; --card:#FFFFFF; --bench:#10171A; --ink:#10201B; --ink-soft:#46594F;
+    --line:#CBD6D1; --line-d:#27332F;
+    --A:#27A052; --C:#2F6FED; --G:#E0A12E; --U:#E0533D; --m5C:#9B4DDB;
+    --ok:#27A052; --bad:#E0533D; --focus:#9B4DDB;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important;scroll-behavior:auto}}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.55;-webkit-font-smoothing:antialiased}
+  h1,h2,h3,h4,.disp{font-family:"Space Grotesk",sans-serif;letter-spacing:-.01em}
+  .mono{font-family:"JetBrains Mono",monospace}
+  a{color:var(--C)}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 22px}
+  .grid{display:grid;grid-template-columns:248px 1fr;gap:34px;align-items:start}
+  @media(max-width:860px){.grid{grid-template-columns:1fr}}
+
+  header.hero{background:var(--bench);color:#E7EEEA;padding:46px 0 40px;border-bottom:1px solid var(--line-d)}
+  .eyebrow{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:#7FE0B0}
+  header.hero h1{font-size:clamp(30px,5vw,52px);line-height:1.02;margin:.34em 0 .35em;font-weight:600;color:#F3F8F5}
+  header.hero p.lede{max-width:60ch;color:#AEC1B8;font-size:17px;margin:0}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:26px;font-family:"JetBrains Mono",monospace;font-size:12.5px}
+  .legend span{display:inline-flex;align-items:center;gap:7px;color:#C7D6CF}
+  .swatch{width:13px;height:13px;border-radius:3px;display:inline-block}
+
+  nav.stepper{position:sticky;top:18px}
+  .stepper ol{list-style:none;margin:0;padding:0}
+  .step{display:flex;gap:13px;padding:11px 12px;border-radius:11px;cursor:pointer;align-items:flex-start;border:1px solid transparent;transition:background .15s,border-color .15s}
+  .step:hover{background:#dfe7e4}
+  .step[aria-current="true"]{background:var(--card);border-color:var(--line);box-shadow:0 1px 0 rgba(0,0,0,.03)}
+  .step .num{font-family:"JetBrains Mono",monospace;font-size:12px;font-weight:700;width:26px;height:26px;flex:0 0 26px;border-radius:7px;display:grid;place-items:center;background:#d3ddd8;color:var(--ink-soft)}
+  .step[aria-current="true"] .num{background:var(--ink);color:#fff}
+  .step.done .num{background:var(--ok);color:#fff}
+  .step .lab{font-size:14px;font-weight:500;line-height:1.25}
+  .step .sub{display:block;font-size:11.5px;color:var(--ink-soft);font-weight:400;margin-top:2px}
+  .progress{margin-top:16px;font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink-soft)}
+  .bar{height:6px;background:#d3ddd8;border-radius:99px;overflow:hidden;margin-top:7px}
+  .bar > i{display:block;height:100%;width:0;background:var(--m5C);transition:width .4s ease}
+
+  main{padding:34px 0 80px}
+  .module{display:none;animation:fade .35s ease}
+  .module.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .modhead{display:flex;align-items:baseline;gap:12px;margin-bottom:4px}
+  .modhead .tag{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--m5C);letter-spacing:.12em}
+  .module h2{font-size:clamp(23px,3.4vw,33px);margin:.1em 0 .15em;font-weight:600}
+  .module > p.intro{color:var(--ink-soft);font-size:16.5px;margin:.2em 0 0;max-width:66ch}
+
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:22px 24px;margin-top:20px}
+  .panel h3{font-size:13px;margin:0 0 12px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-soft);font-weight:600;font-family:"JetBrains Mono",monospace}
+  .panel p{margin:.4em 0}
+  .analogy{border-left:3px solid var(--m5C);padding:4px 0 4px 15px;background:linear-gradient(90deg,rgba(155,77,219,.06),transparent);border-radius:0 8px 8px 0}
+  .analogy b{color:var(--m5C)}
+  .story{border-left:3px solid var(--G);background:linear-gradient(90deg,rgba(224,161,46,.08),transparent)}
+  .story h3{color:#a9760f}
+  .story p{margin:.3em 0;font-size:14.5px}
+  .story a{color:#a9760f}
+  .diagram svg{width:100%;height:auto;display:block}
+  .diag-cap{font-size:12.5px;color:var(--ink-soft);margin-top:10px;font-family:"JetBrains Mono",monospace}
+
+  .flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:6px}
+  .stepcard{border:1px solid var(--line);border-radius:11px;padding:13px 14px;background:#fbfdfc}
+  .stepcard .n{font-family:"JetBrains Mono",monospace;font-size:11px;color:var(--m5C);font-weight:700}
+  .stepcard h4{font-size:15px;margin:3px 0 5px;font-weight:600}
+  .stepcard p{font-size:13.5px;color:var(--ink-soft);margin:0}
+  .ref{font-size:12.5px;color:var(--ink-soft);font-family:"JetBrains Mono",monospace;margin-top:14px}
+  .ref a{color:var(--ink-soft);text-decoration:underline}
+
+  /* ---- conversion bench (aligned 3-row alignment) ---- */
+  .bench-panel{background:var(--bench);border:1px solid var(--line-d);border-radius:15px;padding:24px;margin-top:22px;color:#DEE9E3}
+  .bench-panel h3{color:#7FE0B0;font-family:"JetBrains Mono",monospace;font-size:13px;letter-spacing:.08em;text-transform:uppercase;margin:0 0 4px}
+  .bench-panel .hint{font-size:13.5px;color:#9DB3AA;margin:0 0 14px}
+  .align{display:grid;gap:8px;overflow-x:auto;padding-bottom:6px}
+  .arow{display:flex;align-items:center;gap:8px}
+  .arow .rl{flex:0 0 92px;font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.05em;color:#7FE0B0;text-align:right}
+  .arow .end{flex:0 0 18px;width:18px;text-align:center;font-family:"JetBrains Mono",monospace;font-size:12px;color:#6f857c}
+  .cells{display:flex;gap:5px}
+  .nt{font-family:"JetBrains Mono",monospace;font-weight:700;font-size:17px;width:30px;height:38px;border-radius:7px;display:grid;place-items:center;background:#1d2826;position:relative;user-select:none;transition:transform .25s,background .25s,color .25s}
+  .nt small{position:absolute;bottom:1px;font-size:7.5px;letter-spacing:0;opacity:.85;font-weight:500}
+  .nt.A{color:var(--A)} .nt.C{color:var(--C)} .nt.G{color:var(--G)} .nt.U{color:var(--U)} .nt.T{color:var(--U)}
+  .nt.m5C{color:#fff;background:var(--m5C);box-shadow:0 0 0 2px rgba(155,77,219,.4),0 6px 16px rgba(155,77,219,.35)}
+  .nt.callC{color:#fff;background:var(--m5C)}
+  .nt.callT{color:#fff;background:var(--U)}
+  .nt.clickable{cursor:pointer;outline:1px dashed #3a4b45}
+  .nt.clickable:hover{transform:translateY(-3px)}
+  .nt.ghost{opacity:0}
+  .nt.flip{animation:flip .5s ease}
+  @keyframes flip{0%{transform:rotateX(0)}45%{transform:rotateX(90deg)}55%{transform:rotateX(90deg)}100%{transform:rotateX(0)}}
+  .benchctl{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;align-items:center}
+  .btn{font-family:"Space Grotesk";font-weight:600;font-size:14px;border:0;border-radius:9px;padding:10px 16px;cursor:pointer;background:#28524a;color:#cdeee0;transition:background .15s,transform .1s}
+  .btn:hover{background:#316156}.btn:active{transform:translateY(1px)}
+  .btn.primary{background:var(--m5C);color:#fff}.btn.primary:hover{background:#a960e0}
+  .btn.ghost{background:transparent;border:1px solid #3a4b45;color:#9DB3AA}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .stagelab{font-family:"JetBrains Mono",monospace;font-size:12px;color:#7FE0B0;letter-spacing:.1em;margin-left:auto}
+  .readout{margin-top:16px;padding:14px;border:1px dashed #3a4b45;border-radius:10px;font-size:13.5px;color:#B9CCC4;min-height:20px}
+  .readout b.callC{color:#fff;background:var(--m5C);padding:1px 5px;border-radius:4px}
+  .readout b.callT{color:#fff;background:var(--U);padding:1px 5px;border-radius:4px}
+
+  /* ---- PCR simulator ---- */
+  .pcr-panel{background:var(--bench);border:1px solid var(--line-d);border-radius:15px;padding:24px;margin-top:22px;color:#DEE9E3}
+  .pcr-panel h3{color:#7FE0B0;font-family:"JetBrains Mono",monospace;font-size:13px;letter-spacing:.08em;text-transform:uppercase;margin:0 0 4px}
+  .pcr-top{display:grid;grid-template-columns:1.15fr .85fr;gap:22px;align-items:center}
+  @media(max-width:680px){.pcr-top{grid-template-columns:1fr}}
+  .pcrsvg{width:100%;height:auto;background:#0c1214;border:1px solid var(--line-d);border-radius:10px}
+  .pcr-stats .big{font-family:"Space Grotesk";font-weight:700;font-size:clamp(28px,6vw,40px);line-height:1;color:#F3F8F5}
+  .pcr-stats .lbl{font-family:"JetBrains Mono",monospace;font-size:11px;letter-spacing:.12em;color:#7FE0B0;text-transform:uppercase}
+  .pcr-stats .copies{font-family:"JetBrains Mono",monospace;font-size:15px;color:#cdeee0;margin-top:10px}
+  .pcr-stats .copies b{color:#fff}
+  .pcr-bar{height:8px;background:#1d2826;border-radius:99px;overflow:hidden;margin-top:12px}
+  .pcr-bar>i{display:block;height:100%;width:0;background:var(--m5C);transition:width .35s ease}
+  .phase{font-family:"JetBrains Mono",monospace;font-size:12px;margin-top:14px;letter-spacing:.04em;min-height:18px;line-height:1.3}
+  .phase .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:middle}
+  .pcrctl{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;align-items:center}
+  .pcr-note{font-size:12.5px;color:#9DB3AA;margin-top:14px;font-family:"JetBrains Mono",monospace}
+  /* duplex animation states */
+  #topStrand,#botStrand{transition:transform .35s ease}
+  #primers,#newTop,#newBot{transition:opacity .4s ease}
+  .stage-denature #topStrand,.stage-anneal #topStrand,.stage-extend #topStrand{transform:translateY(-15px)}
+  .stage-denature #botStrand,.stage-anneal #botStrand,.stage-extend #botStrand{transform:translateY(15px)}
+  .stage-anneal #primers,.stage-extend #primers{opacity:1}
+  .stage-extend #newTop,.stage-extend #newBot{opacity:.95}
+  /* population view */
+  .pcrpop .lane{display:flex;align-items:center;gap:10px;margin:12px 0}
+  .pcrpop .lane-l{flex:0 0 124px;font-family:"JetBrains Mono",monospace;font-size:10.5px;color:#9DB3AA;line-height:1.35}
+  .pcrpop .lane-l em{color:#6f857c;font-style:normal}
+  .pcrpop .lane-cells{flex:1;display:flex;flex-wrap:wrap;gap:3px;align-content:flex-start;min-height:20px}
+  .pcrpop .lane-n{flex:0 0 auto;font-family:"JetBrains Mono",monospace;font-size:13px;font-weight:700;color:#F3F8F5;min-width:84px;text-align:right}
+  .lc{display:inline-block;height:8px;border-radius:3px}
+  .lc.long{width:26px;background:var(--C)}
+  .lc.short{width:9px;background:var(--m5C)}
+  .pop-note{font-family:"JetBrains Mono",monospace;font-size:11px;color:#9DB3AA;margin-top:12px;line-height:1.45}
+
+  .quiz{margin-top:22px;border:1px solid var(--line);border-radius:15px;padding:22px 24px;background:#fbfdfc}
+  .quiz h3{font-size:17px;margin:0 0 4px;font-weight:600;color:var(--ink)}
+  .quiz .q{margin-top:16px}
+  .quiz .q p.qtext{font-weight:600;margin:0 0 9px}
+  .opt{display:block;width:100%;text-align:left;border:1px solid var(--line);background:#fff;border-radius:10px;padding:11px 14px;margin:7px 0;cursor:pointer;font:inherit;font-size:14.5px;transition:border-color .12s,background .12s}
+  .opt:hover{border-color:var(--m5C)}
+  .opt:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+  .opt.correct{border-color:var(--ok);background:rgba(39,160,82,.08)}
+  .opt.wrong{border-color:var(--bad);background:rgba(224,83,61,.08)}
+  .opt.locked{cursor:default;pointer-events:none}
+  .explain{font-size:13.5px;color:var(--ink-soft);margin:8px 2px 0;display:none}
+  .explain.show{display:block}
+  .quizdone{margin-top:16px;font-family:"JetBrains Mono",monospace;font-size:13px;color:var(--ok);display:none}
+  .quizdone.show{display:block}
+
+  .navrow{display:flex;justify-content:space-between;margin-top:30px;gap:12px}
+  .navrow button{font-weight:600;font-size:14px;border:1px solid var(--line);background:#fff;border-radius:10px;padding:11px 18px;cursor:pointer;color:var(--ink);font-family:"Space Grotesk"}
+  .navrow button:hover{border-color:var(--m5C);color:var(--m5C)}
+  .navrow button:disabled{opacity:.4;cursor:not-allowed}
+  .navrow button.next{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .navrow button.next:hover{background:var(--m5C);border-color:var(--m5C);color:#fff}
+  footer{border-top:1px solid var(--line);padding:26px 0;color:var(--ink-soft);font-size:13px}
+  .kbd{font-family:"JetBrains Mono",monospace;background:#fff;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:12px}
+  :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+  .scrollhint{color:var(--m5C);font-weight:600;text-transform:none;letter-spacing:0}
+  /* ============ MOBILE / SMARTPHONE ============ */
+  @media(max-width:860px){
+    body{-webkit-text-size-adjust:100%}
+    .grid{gap:0}
+    nav.stepper{position:sticky;top:0;z-index:30;background:var(--paper);padding:10px 0 8px;box-shadow:0 6px 10px -8px rgba(0,0,0,.25)}
+    .stepper ol{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;scrollbar-width:none}
+    .stepper ol::-webkit-scrollbar{display:none}
+    .step{flex:0 0 auto;gap:8px;align-items:center;padding:9px 14px;border:1px solid var(--line);background:var(--card);border-radius:999px}
+    .step:hover{background:var(--card)}
+    .step .lab{white-space:nowrap;font-size:13.5px;line-height:1}
+    .step .sub{display:none}
+    .step .num{width:23px;height:23px;flex-basis:23px}
+    .step[aria-current="true"]{border-color:var(--m5C);background:#fff}
+    .progress{margin-top:10px}
+    main{padding-top:18px}
+    /* all diagrams fit the screen by default */
+    .diagram svg{width:100%;height:auto}
+  }
+  @media(max-width:560px){
+    .wrap{padding:0 16px}
+    header.hero{padding:30px 0 26px}
+    header.hero p.lede{font-size:16px;line-height:1.5}
+    .module h2{font-size:25px}
+    .module > p.intro{font-size:16.5px;line-height:1.55}
+    .panel{padding:18px 16px;border-radius:12px;margin-top:16px}
+    .panel p{font-size:16px}
+    .panel h3{font-size:12px}
+    .analogy{font-size:16px}
+    .diag-cap{font-size:13px}
+    /* pictorial diagrams: fit; dense ones: pan */
+    .panel.diagram.wide{overflow-x:auto;-webkit-overflow-scrolling:touch}
+    .panel.diagram.wide svg{width:100%;min-width:640px;height:auto}
+    /* conversion bench */
+    .bench-panel,.pcr-panel{padding:18px 15px}
+    .bench-panel .hint,.pcr-panel .hint{font-size:14.5px}
+    .arow{gap:6px}
+    .arow .rl{flex-basis:58px;width:58px;font-size:9.5px}
+    .arow .end{flex-basis:14px;width:14px}
+    .cells{gap:4px}
+    .nt{width:28px;height:35px;font-size:16px}
+    .readout{font-size:14.5px}
+    /* stepcards + flow: single column so the workflow reads top-to-bottom */
+    .flow{grid-template-columns:1fr}
+    .stepcard{padding:15px 16px}
+    .stepcard h4{font-size:16px}
+    .stepcard p{font-size:14.5px}
+    /* touch targets */
+    .opt{padding:14px 15px;min-height:48px;font-size:15.5px}
+    .btn{min-height:48px;font-size:15px}
+    .quiz{padding:20px 16px}
+    .quiz h3{font-size:17px}
+    .quiz .q p.qtext{font-size:16px}
+    .explain{font-size:14.5px}
+    .navrow{gap:8px}
+    .navrow button{flex:1;min-height:48px;font-size:13.5px;padding:12px 8px;text-align:center}
+    /* pcr */
+    .pcr-stats .big{font-size:32px}
+    .pcr-stats .copies{font-size:14px}
+    .pcrpop .lane-l{flex-basis:104px;font-size:11px}
+  }
+  @media(max-width:390px){
+    .wrap{padding:0 13px}
+    .legend{font-size:11px;gap:9px}
+    .nt{width:26px;height:33px;font-size:15px}
+    .arow .rl{flex-basis:52px;width:52px}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">RNA 表觀轉錄體學 · m⁵C 偵測 · 互動實驗模組</div>
+    <h1>轉換工作檯</h1>
+    <p class="lede">從冷凍的細胞團塊，到定序圖譜上標示「已甲基化」的訊號峰。一步一步走過真實的 RNA 亞硫酸氫鹽定序 (bisulfite sequencing) 流程，並認識整個領域賴以成立的關鍵化學把戲：未甲基化的胞嘧啶會去胺基，甲基化的則不會。</p>
+    <div class="legend" aria-label="鹼基顏色對照">
+      <span><i class="swatch" style="background:var(--A)"></i>A&nbsp;腺嘌呤</span>
+      <span><i class="swatch" style="background:var(--C)"></i>C&nbsp;胞嘧啶</span>
+      <span><i class="swatch" style="background:var(--G)"></i>G&nbsp;鳥嘌呤</span>
+      <span><i class="swatch" style="background:var(--U)"></i>U&nbsp;尿嘧啶</span>
+      <span><i class="swatch" style="background:var(--m5C)"></i>m⁵C&nbsp;甲基胞嘧啶</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="grid">
+    <nav class="stepper" aria-label="流程步驟">
+      <ol id="stepper"></ol>
+      <div class="progress">
+        <span id="progresslabel">0 / 6 個模組已完成</span>
+        <div class="bar"><i id="progressbar"></i></div>
+      </div>
+    </nav>
+    <main id="main"></main>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    此為入門教學模組。使用 <span class="kbd">←</span> <span class="kbd">→</span> 在步驟間切換。完成模組測驗即可將其標記點亮為綠色。
+  </div>
+</footer>
+
+<script>
+/* =========================================================
+   DIAGRAM HELPERS
+   ========================================================= */
+
+/* --- pyrimidine ring builder for the bisulfite mechanism --- */
+function pyr(cx,cy,o){
+  const R=28, dx=24, dy=14;
+  const v={
+    C4:[cx,cy-R], N3:[cx+dx,cy-dy], C2:[cx+dx,cy+dy],
+    N1:[cx,cy+R], C6:[cx-dx,cy+dy], C5:[cx-dx,cy-dy]
+  };
+  const L=(a,b,col="var(--ink)",w=1.8)=>`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${col}" stroke-width="${w}"/>`;
+  const DBL=(a,b,col="var(--ink)")=>{const ddx=b[0]-a[0],ddy=b[1]-a[1],m=Math.hypot(ddx,ddy),ox=-ddy/m*2.4,oy=ddx/m*2.4;
+    return L([a[0]+ox,a[1]+oy],[b[0]+ox,b[1]+oy],col)+L([a[0]-ox,a[1]-oy],[b[0]-ox,b[1]-oy],col);};
+  let s="";
+  // ring skeleton
+  s+=L(v.N1,v.C2)+L(v.C2,v.N3)+L(v.N3,v.C4)+L(v.C4,v.C5)+L(v.C5,v.C6)+L(v.C6,v.N1);
+  // 5,6 double bond (inner parallel) when present
+  if(!o.sat56) s+=L([v.C5[0]+4,v.C5[1]+2],[v.C6[0]+4,v.C6[1]-2],"var(--ink)",1.6);
+  // ring N atoms
+  const atom=(p,t)=>`<circle cx="${p[0]}" cy="${p[1]}" r="8.5" fill="var(--card)"/><text x="${p[0]}" y="${p[1]+4}" text-anchor="middle" font-family="JetBrains Mono" font-size="12" font-weight="700" fill="var(--ink)">${t}</text>`;
+  s+=atom(v.N1,"N")+atom(v.N3,"N");
+  // tiny 5 / 6 position numerals
+  s+=`<text x="${cx-13}" y="${cy-8}" font-family="JetBrains Mono" font-size="7.5" fill="#9aa9a1">5</text>`;
+  s+=`<text x="${cx-13}" y="${cy+13}" font-family="JetBrains Mono" font-size="7.5" fill="#9aa9a1">6</text>`;
+  // C2 carbonyl (=O) lower-right
+  s+=DBL(v.C2,[v.C2[0]+15,v.C2[1]+11],"var(--U)");
+  s+=`<text x="${v.C2[0]+22}" y="${v.C2[1]+18}" font-family="JetBrains Mono" font-size="12" font-weight="700" fill="var(--U)">O</text>`;
+  // N1-R (ribose) bond down
+  s+=L(v.N1,[v.N1[0],v.N1[1]+14]);
+  s+=`<text x="${v.N1[0]}" y="${v.N1[1]+26}" text-anchor="middle" font-family="JetBrains Mono" font-size="10.5" fill="var(--ink-soft)">R</text>`;
+  // C4 substituent: NH2 (amine, single) or =O (carbonyl, double)
+  if(o.c4==="NH2"){ s+=L(v.C4,[v.C4[0],v.C4[1]-14],"var(--C)"); s+=`<text x="${v.C4[0]}" y="${v.C4[1]-18}" text-anchor="middle" font-family="JetBrains Mono" font-size="12" font-weight="700" fill="var(--C)">NH₂</text>`; }
+  else { s+=DBL(v.C4,[v.C4[0],v.C4[1]-14],"var(--U)"); s+=`<text x="${v.C4[0]}" y="${v.C4[1]-18}" text-anchor="middle" font-family="JetBrains Mono" font-size="12" font-weight="700" fill="var(--U)">O</text>`; }
+  // C5 substituent
+  if(o.c5==="CH3"){ s+=L(v.C5,[v.C5[0]-15,v.C5[1]-10],"var(--m5C)",2.4); s+=`<text x="${v.C5[0]-26}" y="${v.C5[1]-13}" text-anchor="middle" font-family="JetBrains Mono" font-size="11" font-weight="700" fill="var(--m5C)">CH₃</text>`; }
+  // C6 substituent (bisulfite adduct)
+  if(o.c6==="SO3"){ s+=L(v.C6,[v.C6[0]-15,v.C6[1]+10],"var(--G)",2.4); s+=`<text x="${v.C6[0]-30}" y="${v.C6[1]+16}" text-anchor="middle" font-family="JetBrains Mono" font-size="11" font-weight="700" fill="var(--G)">SO₃⁻</text>`; }
+  // structure label
+  s+=`<text x="${cx}" y="${cy+R+30}" text-anchor="middle" font-family="Space Grotesk" font-size="11.5" font-weight="600" fill="var(--ink)">${o.label}</text>`;
+  if(o.sub) s+=`<text x="${cx}" y="${cy+R+45}" text-anchor="middle" font-family="IBM Plex Sans" font-size="10" fill="var(--ink-soft)">${o.sub}</text>`;
+  return s;
+}
+function rxnArrow(x1,x2,y,label,sub,blocked){
+  let s=`<line x1="${x1}" y1="${y}" x2="${x2-7}" y2="${y}" stroke="${blocked?'var(--ink-soft)':'var(--ink)'}" stroke-width="1.8" ${blocked?'stroke-dasharray="5 4"':''} marker-end="url(#mech)"/>`;
+  s+=`<text x="${(x1+x2)/2}" y="${y-9}" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="${blocked?'var(--ink-soft)':'var(--ink)'}">${label}</text>`;
+  if(sub) s+=`<text x="${(x1+x2)/2}" y="${y+15}" text-anchor="middle" font-family="JetBrains Mono" font-size="9" fill="var(--ink-soft)">${sub}</text>`;
+  if(blocked) s+=`<text x="${(x1+x2)/2}" y="${y+4}" text-anchor="middle" font-family="JetBrains Mono" font-size="15" font-weight="700" fill="var(--U)">✕</text>`;
+  return s;
+}
+function bisulfiteDiagram(){
+  const r1=120, r2=320;
+  const cx=[95,320,545,770];
+  let s=`<svg viewBox="0 0 880 420" role="img" aria-label="亞硫酸氫鹽機制：胞嘧啶經磺化、去胺基、去磺化轉為尿嘧啶；m5C 被阻擋">`;
+  // row tags
+  s+=`<text x="14" y="60" font-family="JetBrains Mono" font-size="10" fill="var(--ink-soft)" transform="rotate(-90 14 60)">未甲基化 C</text>`;
+  s+=`<text x="14" y="262" font-family="JetBrains Mono" font-size="10" fill="var(--m5C)" transform="rotate(-90 14 262)">已甲基化 m⁵C</text>`;
+  // ROW 1: cytosine -> uracil
+  s+=pyr(cx[0],r1,{c4:"NH2",c5:"H",c6:"H",sat56:false,label:"胞嘧啶 Cytosine"});
+  s+=rxnArrow(cx[0]+46,cx[1]-46,r1,"磺化 sulfonation","+ HSO₃⁻");
+  s+=pyr(cx[1],r1,{c4:"NH2",c5:"H",c6:"SO3",sat56:true,label:"胞嘧啶-6-磺酸鹽"});
+  s+=rxnArrow(cx[1]+46,cx[2]-46,r1,"去胺基 deamination","− NH₃ (+H₂O)");
+  s+=pyr(cx[2],r1,{c4:"O",c5:"H",c6:"SO3",sat56:true,label:"尿嘧啶-6-磺酸鹽"});
+  s+=rxnArrow(cx[2]+46,cx[3]-46,r1,"去磺化 desulfonation","鹼性, OH⁻");
+  s+=pyr(cx[3],r1,{c4:"O",c5:"H",c6:"H",sat56:false,label:"尿嘧啶 Uracil",sub:"定序讀為 T"});
+  // ROW 2: m5C blocked
+  s+=pyr(cx[0],r2,{c4:"NH2",c5:"CH3",c6:"H",sat56:false,label:"5-甲基胞嘧啶"});
+  s+=rxnArrow(cx[0]+46,cx[1]-46,r2,"磺化被阻擋","5-CH₃ 保護 C5–C6",true);
+  s+=pyr(cx[1],r2,{c4:"NH2",c5:"CH3",c6:"H",sat56:false,label:"5-甲基胞嘧啶",sub:"不變 — 定序讀為 C"});
+  s+=`<defs><marker id="mech" markerWidth="8" markerHeight="8" refX="6.5" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 Z" fill="var(--ink)"/></marker></defs></svg>`;
+  return s;
+}
+
+DIAG_purify = `<svg viewBox="0 0 680 252" role="img" aria-label="酸性酚-氯仿萃取後的微量離心管，顯示三相分層與矽膠管柱替代方案">
+  <defs>
+    <clipPath id="tubeClip"><path d="M80 60 L80 150 L114 224 L148 150 L148 60 Z"/></clipPath>
+    <linearGradient id="orgGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E0617F"/><stop offset="1" stop-color="#C94E6E"/>
+    </linearGradient>
+  </defs>
+  <!-- open flip cap -->
+  <g transform="rotate(-32 80 56)">
+    <rect x="44" y="40" width="42" height="22" rx="10" fill="#e3ebe7" stroke="var(--line)" stroke-width="1.6"/>
+    <rect x="60" y="44" width="20" height="14" rx="6" fill="#cfdad4"/>
+  </g>
+  <!-- neck / rim -->
+  <rect x="76" y="48" width="76" height="16" rx="6" fill="#eef3f1" stroke="var(--line)" stroke-width="1.6"/>
+  <!-- liquid phases (clipped to tube interior) -->
+  <g clip-path="url(#tubeClip)">
+    <rect x="78" y="60" width="72" height="62" fill="#E6F0F4"/>            <!-- top: transparent aqueous -->
+    <rect x="78" y="122" width="72" height="9" fill="#F4F1E8"/>           <!-- middle: white interphase -->
+    <rect x="78" y="131" width="72" height="95" fill="url(#orgGrad)"/>    <!-- bottom: organic (pink) -->
+    <ellipse cx="100" cy="78" rx="9" ry="4" fill="#ffffff" opacity="0.45"/> <!-- glass highlight -->
+  </g>
+  <!-- tube outline -->
+  <path d="M80 60 L80 150 L114 224 L148 150 L148 60" fill="none" stroke="#7d8c85" stroke-width="2.2" stroke-linejoin="round"/>
+  <!-- graduation ticks + volume -->
+  <g stroke="#7d8c85" stroke-width="1.2" opacity="0.7">
+    <line x1="148" y1="84" x2="142" y2="84"/><line x1="148" y1="104" x2="142" y2="104"/><line x1="148" y1="124" x2="142" y2="124"/>
+  </g>
+  <text x="138" y="78" text-anchor="end" font-family="JetBrains Mono" font-size="8.5" fill="#7d8c85">1.5</text>
+  <!-- leader lines to labels -->
+  <line x1="150" y1="92"  x2="246" y2="78"  stroke="var(--line)" stroke-width="1.4"/>
+  <line x1="150" y1="126" x2="246" y2="128" stroke="var(--line)" stroke-width="1.4"/>
+  <line x1="138" y1="180" x2="246" y2="180" stroke="var(--line)" stroke-width="1.4"/>
+  <text x="252" y="74"  font-family="JetBrains Mono" font-size="12.5" font-weight="700" fill="#2f6fed">上層 — 水相</text>
+  <text x="252" y="90"  font-family="IBM Plex Sans" font-size="11.5" fill="var(--ink-soft)">RNA 主要在此；取此層</text>
+  <text x="252" y="124" font-family="JetBrains Mono" font-size="12.5" font-weight="700" fill="#5a6b62">中層 — 白色界面</text>
+  <text x="252" y="140" font-family="IBM Plex Sans" font-size="11.5" fill="var(--ink-soft)">DNA 與少量蛋白質</text>
+  <text x="252" y="176" font-family="JetBrains Mono" font-size="12.5" font-weight="700" fill="#C94E6E">下層 — 有機相</text>
+  <text x="252" y="192" font-family="IBM Plex Sans" font-size="11.5" fill="var(--ink-soft)">蛋白質與其他雜質</text>
+  <text x="114" y="244" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--ink-soft)">酸性酚–氯仿</text>
+  <!-- silica column alternative -->
+  <text x="555" y="56" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--ink-soft)">— 或矽膠管柱 —</text>
+  <rect x="515" y="72" width="80" height="120" rx="8" fill="#fff" stroke="var(--line)" stroke-width="2"/>
+  <rect x="515" y="118" width="80" height="9" fill="var(--m5C)" opacity="0.5"/>
+  <circle cx="535" cy="96" r="4" fill="var(--C)"/><circle cx="555" cy="102" r="4" fill="var(--C)"/><circle cx="573" cy="94" r="4" fill="var(--C)"/>
+  <text x="555" y="148" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="var(--ink-soft)">矽膠</text>
+  <text x="555" y="162" text-anchor="middle" font-family="JetBrains Mono" font-size="10" fill="var(--ink-soft)">薄膜</text>
+  <text x="555" y="210" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--ink-soft)">結合 · 沖洗 · 沖提</text>
+</svg>`;
+
+DIAG_mrna = `<svg viewBox="0 0 680 250" role="img" aria-label="Oligo-dT 磁珠以 poly-A 尾捕捉 mRNA，其他 RNA 被沖洗掉">
+  <circle cx="120" cy="135" r="50" fill="var(--m5C)" opacity="0.12" stroke="var(--m5C)" stroke-width="1.5"/>
+  <text x="120" y="139" text-anchor="middle" font-family="Space Grotesk" font-size="14" font-weight="700" fill="var(--m5C)">磁珠</text>
+  <text x="120" y="200" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--ink-soft)">oligo-dT</text>
+  <g font-family="JetBrains Mono" font-size="13" font-weight="700" fill="var(--U)">
+    <text x="168" y="120">T</text><text x="184" y="120">T</text><text x="200" y="120">T</text><text x="216" y="120">T</text>
+  </g>
+  <g font-family="JetBrains Mono" font-size="13" font-weight="700" fill="var(--A)">
+    <text x="168" y="138">A</text><text x="184" y="138">A</text><text x="200" y="138">A</text><text x="216" y="138">A</text>
+  </g>
+  <line x1="170" y1="125" x2="216" y2="125" stroke="#9aa9a1" stroke-dasharray="2 3"/>
+  <path d="M232 135 H360" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/>
+  <text x="300" y="158" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--ink-soft)">mRNA 主體</text>
+  <text x="196" y="100" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--A)">poly(A) 尾</text>
+  <path d="M430 120 q14 -12 28 0" stroke="var(--ink-soft)" stroke-width="2.5" fill="none"/>
+  <path d="M430 120 q14 12 28 0" stroke="var(--ink-soft)" stroke-width="2.5" fill="none"/>
+  <text x="500" y="96"  font-family="JetBrains Mono" font-size="12" fill="var(--ink-soft)">rRNA · tRNA</text>
+  <text x="500" y="113" font-family="IBM Plex Sans" font-size="12" fill="var(--ink-soft)">無尾 → 被沖洗掉</text>
+  <text x="600" y="150" font-family="JetBrains Mono" font-size="22" fill="var(--ink-soft)">→</text>
+  <text x="615" y="172" text-anchor="middle" font-family="JetBrains Mono" font-size="11" fill="var(--ink-soft)">沖洗</text>
+  <!-- rRNA: anatomically shaped ribosome (large + small subunit) -->
+  <g stroke="var(--ink-soft)" stroke-width="1.1">
+    <!-- large subunit (60S): body + central protuberance + stalks -->
+    <g fill="#b7c4cd">
+      <ellipse cx="458" cy="178" rx="23" ry="14"/>
+      <ellipse cx="455" cy="165" rx="8" ry="7"/>
+      <ellipse cx="480" cy="171" rx="6" ry="5"/>
+      <ellipse cx="435" cy="172" rx="5" ry="4"/>
+    </g>
+    <!-- small subunit (40S): body + head + beak -->
+    <g fill="#d2dce2">
+      <ellipse cx="461" cy="200" rx="19" ry="11"/>
+      <ellipse cx="447" cy="194" rx="9" ry="6.5"/>
+    </g>
+    <!-- subunit interface / mRNA channel -->
+    <line x1="436" y1="189" x2="486" y2="189" stroke="#7d8c85" stroke-width="1" opacity="0.55" stroke-dasharray="3 2"/>
+  </g>
+  <text x="460" y="228" text-anchor="middle" font-family="JetBrains Mono" font-size="9.5" fill="var(--ink-soft)">rRNA（核糖體）</text>
+  <!-- tRNA: four-arm cloverleaf secondary structure -->
+  <g fill="#e9efed" stroke="var(--ink-soft)" stroke-width="1.3">
+    <ellipse cx="548" cy="172" rx="7" ry="17"/>                                  <!-- acceptor stem -->
+    <ellipse cx="531" cy="180" rx="16" ry="7" transform="rotate(-20 531 180)"/> <!-- D arm -->
+    <ellipse cx="565" cy="180" rx="16" ry="7" transform="rotate(20 565 180)"/>  <!-- TpsiC arm -->
+    <ellipse cx="548" cy="205" rx="7.5" ry="18"/>                               <!-- anticodon arm -->
+    <circle cx="548" cy="186" r="7"/>                                          <!-- junction -->
+  </g>
+  <!-- base-pair rungs on the two vertical stems -->
+  <g stroke="var(--ink-soft)" stroke-width="1">
+    <line x1="544" y1="166" x2="552" y2="166"/><line x1="544" y1="173" x2="552" y2="173"/>
+    <line x1="544" y1="196" x2="552" y2="196"/><line x1="544" y1="202" x2="552" y2="202"/>
+  </g>
+  <!-- 3' acceptor end + amino-acid attachment -->
+  <path d="M551 156 q9 -7 15 -4" fill="none" stroke="var(--ink-soft)" stroke-width="1.3"/>
+  <circle cx="568" cy="151" r="3.4" fill="var(--G)"/>
+  <text x="574" y="150" font-family="JetBrains Mono" font-size="8" fill="var(--G)">aa</text>
+  <text x="568" y="163" font-family="JetBrains Mono" font-size="7.5" fill="var(--ink-soft)">3′</text>
+  <!-- anticodon triplet -->
+  <g fill="var(--U)"><circle cx="543" cy="220" r="2.2"/><circle cx="548" cy="222" r="2.2"/><circle cx="553" cy="220" r="2.2"/></g>
+  <text x="548" y="236" text-anchor="middle" font-family="JetBrains Mono" font-size="8" fill="var(--U)">反密碼子</text>
+  <text x="548" y="247" text-anchor="middle" font-family="JetBrains Mono" font-size="9.5" fill="var(--ink-soft)">tRNA</text>
+</svg>`;
+
+function rtDiagram(){
+  // template RNA read 3'(left) -> 5'(right); cDNA synthesised 5'->3' left->right
+  const cols=[
+    {t:"A"},
+    {t:"U",hl:"var(--U)",tcol:"var(--U)"},   // former unmethylated C, now U
+    {t:"G"},
+    {t:"U"},
+    {t:"A"},
+    {t:"C",hl:"var(--m5C)",tcol:"var(--m5C)"},// surviving m5C, still C
+    {t:"G"},
+    {t:"U"}
+  ];
+  const pair={A:"T",U:"A",G:"C",C:"G"};
+  const baseCol=b=>b==="A"?"var(--A)":b==="C"?"var(--C)":b==="G"?"var(--G)":"var(--U)";
+  const cw=44,x0=120,yT=88,yC=146;
+  const n=cols.length,xEnd=x0+(n-1)*cw,frontier=6; // cols >=frontier not yet synthesised
+  let s=`<svg viewBox="0 0 700 232" role="img" aria-label="反轉錄細節：引子黏合至轉換後的 RNA 模板，反轉錄酶以 5′→3′ 方向延伸互補 cDNA 股">`;
+  // column highlights
+  cols.forEach((c,i)=>{ if(c.hl) s+=`<rect x="${x0+i*cw-15}" y="62" width="30" height="104" rx="6" fill="${c.hl}" opacity="0.10"/>`; });
+  // extension-direction arrow (top)
+  s+=`<line x1="${x0+3*cw-12}" y1="50" x2="${xEnd+10}" y2="50" stroke="var(--ink)" stroke-width="2" marker-end="url(#rtx)"/>`;
+  s+=`<text x="${(x0+3*cw+xEnd)/2}" y="44" text-anchor="middle" font-family="JetBrains Mono" font-size="10.5" fill="var(--ink)">RT 以 5′→3′ 延伸</text>`;
+  // template rail + labels
+  s+=`<line x1="${x0-14}" y1="${yT-16}" x2="${xEnd+14}" y2="${yT-16}" stroke="#9aa9a1" stroke-width="2"/>`;
+  s+=`<text x="${x0-20}" y="${yT-12}" text-anchor="end" font-family="JetBrains Mono" font-size="12" font-weight="700" fill="var(--ink-soft)">3′</text>`;
+  s+=`<text x="${xEnd+18}" y="${yT-12}" font-family="JetBrains Mono" font-size="12" font-weight="700" fill="var(--ink-soft)">5′</text>`;
+  s+=`<text x="${x0-20}" y="${yT-30}" font-family="IBM Plex Sans" font-size="11.5" fill="var(--ink-soft)">模板 RNA（已轉換）</text>`;
+  // template letters
+  cols.forEach((c,i)=>{ s+=`<text x="${x0+i*cw}" y="${yT+5}" text-anchor="middle" font-family="JetBrains Mono" font-weight="700" font-size="18" fill="${c.tcol||baseCol(c.t)}">${c.t}</text>`; });
+  // pairing ticks (faded past the frontier)
+  cols.forEach((c,i)=>{ const op=i>=frontier?0.25:1; s+=`<line x1="${x0+i*cw}" y1="${yT+12}" x2="${x0+i*cw}" y2="${yC-14}" stroke="#9aa9a1" stroke-width="1.4" stroke-dasharray="2 3" opacity="${op}"/>`; });
+  // cDNA letters (faded past the frontier = not yet made)
+  cols.forEach((c,i)=>{ const cd=pair[c.t],op=i>=frontier?0.22:1; s+=`<text x="${x0+i*cw}" y="${yC+5}" text-anchor="middle" font-family="JetBrains Mono" font-weight="700" font-size="18" fill="${baseCol(cd)}" opacity="${op}">${cd}</text>`; });
+  // cDNA rail + labels
+  s+=`<line x1="${x0-14}" y1="${yC+16}" x2="${xEnd+14}" y2="${yC+16}" stroke="#9aa9a1" stroke-width="2"/>`;
+  s+=`<text x="${x0-20}" y="${yC+21}" text-anchor="end" font-family="JetBrains Mono" font-size="12" font-weight="700" fill="var(--ink-soft)">5′</text>`;
+  s+=`<text x="${xEnd+18}" y="${yC+21}" font-family="JetBrains Mono" font-size="12" font-weight="700" fill="var(--ink-soft)">3′</text>`;
+  s+=`<text x="${x0-20}" y="${yC+40}" font-family="IBM Plex Sans" font-size="11.5" fill="var(--ink-soft)">cDNA（新合成股）</text>`;
+  // primer region (cols 0-2)
+  s+=`<rect x="${x0-15}" y="${yC-15}" width="${2*cw+30}" height="36" rx="8" fill="var(--A)" opacity="0.10" stroke="var(--A)" stroke-dasharray="4 3"/>`;
+  s+=`<text x="${x0+cw}" y="${yC+57}" text-anchor="middle" font-family="JetBrains Mono" font-size="10.5" fill="var(--A)">引子在此黏合</text>`;
+  // RT enzyme at the growing frontier
+  const rx=x0+(frontier-0.5)*cw;
+  s+=`<circle cx="${rx}" cy="${(yT+yC)/2}" r="19" fill="var(--m5C)" opacity="0.16" stroke="var(--m5C)" stroke-width="1.5"/>`;
+  s+=`<text x="${rx}" y="${(yT+yC)/2+4}" text-anchor="middle" font-family="Space Grotesk" font-size="12" font-weight="700" fill="var(--m5C)">RT</text>`;
+  // right-side callouts
+  const lx=xEnd+34;
+  s+=`<circle cx="${lx+6}" cy="92" r="5" fill="var(--U)"/>`;
+  s+=`<text x="${lx+18}" y="89" font-family="IBM Plex Sans" font-size="11" fill="var(--ink)">U = 未甲基化 C</text>`;
+  s+=`<text x="${lx+18}" y="104" font-family="IBM Plex Sans" font-size="11" fill="var(--ink-soft)">→ cDNA A → 讀為 T</text>`;
+  s+=`<circle cx="${lx+6}" cy="130" r="5" fill="var(--m5C)"/>`;
+  s+=`<text x="${lx+18}" y="127" font-family="IBM Plex Sans" font-size="11" fill="var(--ink)">C = m⁵C 存留</text>`;
+  s+=`<text x="${lx+18}" y="142" font-family="IBM Plex Sans" font-size="11" fill="var(--ink-soft)">→ cDNA G → 讀為 C</text>`;
+  s+=`<defs><marker id="rtx" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0 0 L9 4.5 L0 9 Z" fill="var(--ink)"/></marker></defs></svg>`;
+  return s;
+}
+var DIAG_rt = rtDiagram();
+
+function primerDiagram(){
+  const ref="AUGCAUCGAUGCCAUCGUACGUAC".split("");
+  // candidate = the C nearest the centre
+  let cand=-1,bd=99; ref.forEach((b,i)=>{ if(b==="C"){const d=Math.abs(i-12); if(d<bd){bd=d;cand=i;}} });
+  const cw=25, x0=42, yRef=66, yConv=104;
+  const fwd=[1,6], rev=[17,22]; // flank columns (inclusive)
+  const colOf=b=>b==="A"?"var(--A)":b==="C"?"var(--C)":b==="G"?"var(--G)":"var(--U)";
+  let s=`<svg viewBox="0 0 680 200" role="img" aria-label="引子黏合至轉換後 cDNA，位於候選胞嘧啶兩側但不重疊">`;
+  // keep-clear box around candidate
+  s+=`<rect x="${x0+cand*cw-12}" y="46" width="${cw}" height="76" rx="7" fill="var(--m5C)" opacity="0.12" stroke="var(--m5C)" stroke-dasharray="4 4"/>`;
+  // row labels
+  s+=`<text x="36" y="${yRef+5}" text-anchor="end" font-family="JetBrains Mono" font-size="10" fill="var(--ink-soft)">REF</text>`;
+  s+=`<text x="36" y="${yConv+5}" text-anchor="end" font-family="JetBrains Mono" font-size="10" fill="var(--ink-soft)">cDNA</text>`;
+  ref.forEach((b,i)=>{
+    s+=`<text x="${x0+i*cw}" y="${yRef+5}" text-anchor="middle" font-family="JetBrains Mono" font-weight="700" font-size="16" fill="${colOf(b)}">${b}</text>`;
+    let cb=b,cc=colOf(b);
+    if(b==="C"){ if(i===cand){cb="C";cc="var(--m5C)";} else {cb="T";cc="var(--U)";} }
+    if(b==="U"){cb="A";cc="var(--A)";}            // converted cDNA strand: template U -> A in cDNA... keep teaching-simple: show converted READ
+    // simpler & consistent with bench: show converted strand bases (C->T unless m5C)
+    if(b==="U"){cb="U";cc="var(--U)";}
+    s+=`<text x="${x0+i*cw}" y="${yConv+5}" text-anchor="middle" font-family="JetBrains Mono" font-weight="700" font-size="16" fill="${cc}">${cb}</text>`;
+  });
+  // candidate label
+  s+=`<text x="${x0+cand*cw}" y="38" text-anchor="middle" font-family="JetBrains Mono" font-size="9.5" fill="var(--m5C)">候選 m⁵C — 保持淨空</text>`;
+  // forward primer arrow (5'->3', points right) under left flank
+  const fx1=x0+fwd[0]*cw-10, fx2=x0+fwd[1]*cw+10;
+  s+=`<line x1="${fx1}" y1="138" x2="${fx2}" y2="138" stroke="var(--A)" stroke-width="3" marker-end="url(#pf)"/>`;
+  s+=`<text x="${(fx1+fx2)/2}" y="156" text-anchor="middle" font-family="JetBrains Mono" font-size="10.5" fill="var(--A)">正向引子 5′→3′</text>`;
+  // reverse primer arrow (5'->3' on complement, points left) under right flank
+  const rx1=x0+rev[1]*cw+10, rx2=x0+rev[0]*cw-10;
+  s+=`<line x1="${rx1}" y1="138" x2="${rx2}" y2="138" stroke="var(--U)" stroke-width="3" marker-end="url(#pr)"/>`;
+  s+=`<text x="${(rx1+rx2)/2}" y="156" text-anchor="middle" font-family="JetBrains Mono" font-size="10.5" fill="var(--U)">反向引子 5′→3′</text>`;
+  s+=`<text x="340" y="178" text-anchor="middle" font-family="IBM Plex Sans" font-size="11" fill="var(--ink-soft)">擴增子涵蓋候選位點；兩支引子皆不觸及它</text>`;
+  s+=`<defs>
+    <marker id="pf" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0 0 L9 4.5 L0 9 Z" fill="var(--A)"/></marker>
+    <marker id="pr" markerWidth="9" markerHeight="9" refX="2" refY="4.5" orient="auto"><path d="M9 0 L0 4.5 L9 9 Z" fill="var(--U)"/></marker>
+  </defs></svg>`;
+  return s;
+}
+
+/* =========================================================
+   CONTENT — 6 modules
+   ========================================================= */
+const MODULES = [
+  {
+    tag:"步驟 01", title:"總 RNA 純化", short:"裂解、變性、捕捉",
+    intro:"在你能問某個胞嘧啶是否被甲基化之前，你需要乾淨、完整的 RNA。RNase（分解 RNA 的酵素）無所不在：你的皮膚上、剛裂解的細胞裡都有。第一步是一套一接觸就能使其失活的化學方法。",
+    diagram:DIAG_purify, diagramCap:"酸性酚–氯仿萃取後，管內呈三相：上層清澈水相（RNA）、薄白色界面（DNA + 少量蛋白質），以及粉紅色有機相（蛋白質、雜質）。取上層。矽膠離心管柱為另一種替代方式。",
+    panels:[
+      {h:"原理",html:`一種離液鹽——<b>硫氰酸胍 (guanidinium thiocyanate)</b>——灌入裂解液，瞬間使所有蛋白質（含 RNase）變性，同時讓核酸留在溶液中。接著，你可用酸性酚–氯仿分相（RNA 留在上層水相；DNA 與蛋白質進入界面／有機相），或在高離液鹽下讓 RNA 結合到<b>矽膠管柱</b>，沖洗後以水沖提。`},
+      {a:true,html:`<b>類比。</b>胍就像門一開就把所有蛋白質趕出夜店的保鑣——分解 RNA 的酵素根本沒機會動手。接著酸性 pH 把剩下的賓客分流：RNA 往左、DNA 往右。`},
+      {flow:[
+        {h:"裂解 + 變性",p:"硫氰酸胍打破細胞，並瞬間使 RNase 失活。"},
+        {h:"分相 / 結合",p:"酸性酚–氯仿把 RNA 分配到水相，或在高鹽下由矽膠結合。"},
+        {h:"沖洗",p:"乙醇沖洗把鹽類、蛋白質與小分子雜質從管柱洗去。"},
+        {h:"沖提",p:"以無核酸酶水釋出純化的總 RNA。確認 A260/280 ≈ 2.0。"}
+      ]},
+      {ref:true,html:`基礎方法：Chomczynski & Sacchi, <i>Anal. Biochem.</i> 1987。<a href="https://doi.org/10.1006/abio.1987.9999" target="_blank" rel="noopener">doi:10.1006/abio.1987.9999</a>`}
+    ],
+    quiz:{title:"自我檢測 — 純化",
+      questions:[
+        {q:"為什麼在最一開始就加入硫氰酸胍？",
+         opts:["它會選擇性結合 mRNA","它使蛋白質變性並瞬間使 RNase 失活","它會甲基化胞嘧啶","它依大小分離 DNA"],correct:1,
+         exp:"RNase 幾乎能耐受一切，唯獨無法承受快速、徹底的蛋白質變性。離液劑在其分解樣本前就先使其失活。"},
+        {q:"酸性酚–氯仿萃取後，RNA 在哪裡？",
+         opts:["有機相（下層）","界面","水相（上層）","黏在管壁上"],correct:2,
+         exp:"在酸性 pH 下，RNA 分配到上層水相，DNA 與蛋白質則留在界面／有機相。"}
+      ]}
+  },
+  {
+    tag:"步驟 02", title:"mRNA 富集", short:"釣出 poly-A 尾",
+    intro:"總 RNA 中約 80–90% 是核糖體 RNA。訊息 RNA（研究編碼區 m⁵C 時常見的目標）只占少數（約 1–5%）。要富集它，靠的是 mRNA 共有、而 rRNA 沒有的一個特徵：多聚腺苷酸尾（poly-A 尾）。",
+    diagram:DIAG_mrna, diagramCap:"Oligo-dT 磁珠以 poly(A) 尾抓住 mRNA；沒有尾巴的 rRNA 與 tRNA 在沖洗時被洗掉。",
+    panels:[
+      {h:"原理",html:`成熟的真核 mRNA 帶有 3′ <b>poly(A) 尾</b> 端 <b>poly(A) 尾</b>。塗覆 <b>oligo-dT</b>（一小段 T）的磁珠會與該尾以鹼基配對（A–T）結合。<b>結合部分</b>即富集後的 mRNA；<b>未結合的流出液</b>則是所有沒有尾巴的分子——非 poly(A) RNA 就在這裡。`},
+      {a:true,html:`<b>類比。</b>poly-A 尾就像只有 mRNA 才配戴的一條魔鬼氈。把 oligo-dT 魔鬼氈磁珠放進混合液：黏住的留作 mRNA，流出液留給其他一切分子。`},
+      {flow:[
+        {h:"結合",p:"在高鹽緩衝液中，oligo-dT 磁珠與 mRNA 的 poly(A) 尾雜交。"},
+        {h:"兩個部分",p:"結合 = mRNA；流出液 = 非 poly(A) RNA（負向選擇）。"},
+        {h:"沖提",p:"低鹽或加熱使 A–T 雙股解離；純化的 mRNA 從磁珠釋出。"},
+        {h:"依問題選擇",p:"編碼區 m⁵C → 留結合部分；非 poly(A) 目標 → 留流出液，或直接略過選擇。"}
+      ]}
+    ],
+    quiz:{title:"自我檢測 — mRNA 富集",
+      questions:[
+        {q:"是什麼分子特徵讓 oligo-dT 磁珠能專一捕捉 mRNA？",
+         opts:["5′ 帽","poly(A) 尾","內部 m⁵C 位點","核糖體結合位點"],correct:1,
+         exp:"Oligo-dT 與 3′ poly(A) 尾以鹼基配對（A–T）。rRNA 與 tRNA 沒有 poly-A 尾。"},
+        {q:"你想研究「非」多聚腺苷酸化 RNA 上的 m⁵C。下列哪種做法會「丟失」你的目標？",
+         opts:["以 poly(A) 選擇作負向選擇 — 保留未結合的流出液","rRNA 去除","標準 poly(A) 選擇 — 保留結合的沖提液","不做富集（總 RNA 本來就約 95% 是非 poly(A)）"],correct:2,
+         exp:"保留結合沖提液正好丟掉你要的東西。非 poly(A) RNA 位於流出液中，所以應以 poly(A) 作負向選擇、去除 rRNA，或直接略過富集——因為 poly(A) RNA 只占總 RNA 約 1–5%，其餘本來就是你的目標族群。"}
+      ]}
+  },
+  {
+    tag:"步驟 03 · 核心", title:"亞硫酸氫鹽轉換", short:"C → U，但 m⁵C 存留",
+    intro:"這是整套方法的化學核心。亞硫酸氫鈉推動胞嘧啶走過三個步驟——磺化、去胺基、去磺化——最終變成尿嘧啶。5-甲基會阻擋第一步，所以 m⁵C 根本進不了這條路徑，仍維持為 C。轉換後，凡是仍存留的 C 都標示著一個甲基化位點。在工作檯上建構一條股並執行反應；參考、轉換與判讀三列會保持對齊，讓你可逐欄由上而下對照。",
+    wide:true, diagram:bisulfiteDiagram(), diagramCap:"上排：胞嘧啶在 C6 磺化，去胺基（失去 NH₃）成為尿嘧啶-磺酸鹽，再於鹼性下去磺化成尿嘧啶——讀為 T。下排：m⁵C 的 5-CH₃ 保護 C5–C6 鍵，磺化根本無法啟動，因此維持為 C。",
+    bench:true,
+    panels:[
+      {h:"三步驟化學",html:`(1) <b>磺化</b>——亞硫酸氫鹽加成到 C5–C6 雙鍵上，形成胞嘧啶-6-磺酸鹽。(2) <b>水解去胺基</b>——C4 的胺基以氨的形式離去，使環轉為尿嘧啶-6-磺酸鹽。(3) <b>去磺化</b>——在鹼性下移除 C6 磺酸基，恢復 5,6 雙鍵，留下<b>尿嘧啶</b>。m⁵C 的 5-甲基在立體與電子效應上都阻礙步驟 1，因此甲基化的胞嘧啶不會轉換，仍讀為 C。`},
+      {a:true,html:`<b>類比。</b>亞硫酸氫鹽就像落在一片胞嘧啶雕像上的酸雨。裸露的雕像（未甲基化 C）經三個風化階段溶解成尿嘧啶。戴著甲基頭盔的雕像（m⁵C）連第一滴都彈開——反應根本無法開始——最後只剩戴頭盔的還屹立不搖。`},
+      {h:"RNA 脆弱 — 小心處理",html:`RNA 亞硫酸氫鹽轉換使用嚴苛、高溫、酸性的條件，會使 RNA 斷裂，也可能造成轉換不完全。加入一個未甲基化的外加對照 (spike-in) 可告訴你轉換是否徹底——它應全讀為 T。少了它，你無法分辨真正的 m⁵C 與未轉換的 C。`},
+      {ref:true,html:`RNA m⁵C 亞硫酸氫鹽定位：Schaefer et al., <i>NAR</i> 2009（<a href="https://doi.org/10.1093/nar/gkn954" target="_blank" rel="noopener">doi:10.1093/nar/gkn954</a>）；全轉錄體層級，Squires et al., <i>NAR</i> 2012（<a href="https://doi.org/10.1093/nar/gks144" target="_blank" rel="noopener">doi:10.1093/nar/gks144</a>）。`},
+      {story:true,h:"科學小故事 · 用化學當定序工具",html:`亞硫酸氫鹽轉換由 <b>Frommer 等人於 1992 年</b>提出（<a href="https://doi.org/10.1073/pnas.89.5.1827" target="_blank" rel="noopener">PNAS, doi:10.1073/pnas.89.5.1827</a>），最初用於 DNA 甲基化。它的巧妙之處在於：不必打造更高階的定序儀，而是用化學把看不見的標記——甲基——翻譯成可讀的鹼基變化。RNA 版本晚了近二十年才問世（<b>Schaefer 等人，2009</b>，<a href="https://doi.org/10.1093/nar/gkn954" target="_blank" rel="noopener">NAR, doi:10.1093/nar/gkn954</a>），正因 RNA 幾乎撐不過這高溫酸性反應——也就是你在此步驟遇到的脆弱性。`},
+      {story:true,h:"科學小故事 · 等了數十年的修飾",html:`早在 1970 年代，m⁵C 就已在 tRNA 與 rRNA 中被偵測到，之後卻沉寂多時、乏人問津。直到 2011 年前後 m⁶A 的 reader／writer／eraser 機制被揭開（<b>Jia 等人，2011</b>，<a href="https://doi.org/10.1038/nchembio.687" target="_blank" rel="noopener">Nat Chem Biol, doi:10.1038/nchembio.687</a>），「RNA 修飾具動態且具調控功能」才變得可信，整個領域隨之復甦。啟示是：一項發現往往得等到對的工具出現——這裡是高通量定序——才被世人看見。`}
+    ],
+    quiz:{title:"自我檢測 — 轉換",
+      questions:[
+        {q:"m⁵C 的 5-甲基在哪一步阻擋了反應？",
+         opts:["跨 C5–C6 鍵的磺化","C4 的去胺基","鹼性下的去磺化","反轉錄"],correct:0,
+         exp:"甲基位於 C5，阻礙亞硫酸氫鹽加成到 C5–C6 雙鍵上——也就是第一步。沒有磺化就沒有後續去胺基，因此 m⁵C 維持為 C。"},
+        {q:"完全轉換後，某個位置仍讀為 C，代表它原本是…",
+         opts:["未甲基化的胞嘧啶","甲基化的胞嘧啶（m⁵C）","腺嘌呤","反應失敗的假象"],correct:1,
+         exp:"未甲基化 C 會走完整條路徑變成 U（讀為 T）。存留的 C 代表 5-甲基阻擋了磺化——這就是你判定的 m⁵C。"}
+      ]}
+  },
+  {
+    tag:"步驟 04", title:"反轉錄", short:"把脆弱的 RNA 複製成穩定 cDNA",
+    intro:"經亞硫酸氫鹽轉換的 RNA 是一條歷經高溫與酸性摧殘的單股分子，撐不過 PCR，也無法作為 DNA 聚合酶的模板。反轉錄酶把它讀一次，寫出一份耐久的 DNA 拷貝——也就是 cDNA——在其他步驟碰到樣本之前，先把轉換結果鎖定。",
+    wide:true, diagram:DIAG_rt, diagramCap:"引子黏合到轉換後 RNA（3′→5′），反轉錄酶以 5′→3′ 延伸出互補的 cDNA 股。模板上的 U（原本是未甲基化 C）配對成 A，之後讀為 T；存留的 m⁵C 作模板配對成 G，讀為 C。",
+    panels:[
+      {h:"原理",html:`一支引子（隨機六聚體、oligo-dT，或基因專一引子）黏合到轉換後的 RNA；<b>反轉錄酶</b>由此延伸，合成第一股 cDNA。模板上每個尿嘧啶都指定 cDNA 上對應一個腺嘌呤，因此未甲基化 C 的訊號——現在是 U——被永久記錄為讀 T 的位置。存留的 m⁵C 仍以 C 作模板。`},
+      {a:true,html:`<b>類比。</b>轉換後的 RNA 是一份濕答答、容易糊掉、且已開始破損的正本。反轉錄在它散架<b>之前</b>把它影印到耐用的紙上——之後每步都用這份結實拷貝，而非脆弱正本。`},
+      {flow:[
+        {h:"接引子",p:"隨機六聚體、oligo-dT 或基因專一引子黏合到轉換後的 RNA。"},
+        {h:"延伸",p:"反轉錄酶合成第一股 cDNA；U 作模板配對成 A。"},
+        {h:"穩定化",p:"產物是可進入雙股狀態的 DNA，能耐受 PCR 熱循環。"},
+        {h:"保留判讀",p:"未甲基化位點固定為讀 T；m⁵C 維持讀 C。"}
+      ]}
+    ],
+    quiz:{title:"自我檢測 — 反轉錄",
+      questions:[
+        {q:"為什麼在 PCR 前要把轉換後的 RNA 反轉錄成 cDNA？",
+         opts:["為了加上甲基化標記","RNA 不穩定，且 DNA 聚合酶需要 DNA 模板；RT 產生穩定 cDNA","為了移除 poly-A 尾","為了提高熔解溫度"],correct:1,
+         exp:"標準 PCR 擴增的是 DNA。轉換後的 RNA 脆弱且為單股；RT 把它複製成耐久、可撐過熱循環的 cDNA。"},
+        {q:"一個原本未甲基化的胞嘧啶（現在在 RNA 中是 U），經 RT 與定序後會讀為…",
+         opts:["C","G","T","A"],correct:2,
+         exp:"未甲基化 C 在轉換中變成 U；U 在第一股 cDNA 中作模板配對成 A，因此該位置最終讀為 T。若仍是 C，代表它原本已甲基化。"}
+      ]}
+  },
+  {
+    tag:"步驟 05", title:"轉換後 cDNA 的引子設計", short:"缺 C 的模板改變了規則",
+    intro:"轉換改寫了你的模板：大多數胞嘧啶變成尿嘧啶，在 cDNA 中再成為胸腺嘧啶。針對原始序列設計的引子將無法結合。你必須針對轉換後的股設計——並讓你要檢測的那個胞嘧啶落在兩支引子之外。",
+    wide:true, diagram:primerDiagram(), diagramCap:"在轉換後 cDNA 上設計引子，並置於兩側區域。候選 m⁵C（紫色）位於擴增子之內、兩支引子之外；箭頭標示各引子的 5′→3′ 方向。",
+    panels:[
+      {h:"轉換後有何改變",html:`轉換後的股<b>缺 C、富 T</b>，因為幾乎每個 C 都變成了 T。這會降低序列複雜度與熔解溫度，也更容易發生錯誤引子結合 (mispriming)。由此衍生兩條實用規則。`},
+      {a:true,html:`<b>類比。</b>轉換把你的段落翻成一種幾乎沒有字母「C」的語言。你不能沿用舊的引子「句子」——必須用新字母表重寫，並避開僅存的幾個 C，因為它們的身分正是你要測量的對象。`},
+      {flow:[
+        {h:"以轉換後股設計",p:"使用預期的轉換後序列（未甲基化處一律 C→T），而非基因體原始序列。"},
+        {h:"避開你要檢測的 C",p:"讓候選 m⁵C 位點落在引子結合區之外，以免引子左右判讀結果。"},
+        {h:"預期較低 Tm",p:"富 T 引子熔解溫度較低；可設計略長的引子以拉回黏合溫度。"},
+        {h:"檢查專一性",p:"複雜度降低會提高錯誤引子結合風險——請對照轉換後參考序列驗證引子。"}
+      ]},
+      {h:"為何不能把 m⁵C 位點放進引子？",html:`若引子恰好覆蓋你要探問的那個胞嘧啶，引子（固定序列）就會在該位置硬塞一個鹼基，無視模板的真實狀態。那你量到的是你的引子，而不是 RNA。`}
+    ],
+    quiz:{title:"自我檢測 — 引子設計",
+      questions:[
+        {q:"與原始序列相比，轉換後的股通常是…",
+         opts:["富 G、高 Tm","缺 C、富 T，且 Tm 較低","組成完全相同","全是腺嘌呤"],correct:1,
+         exp:"未甲基化 C→U→T 的轉換移除了大多數胞嘧啶，留下富 T、複雜度較低、Tm 較低的模板。"},
+        {q:"為什麼要讓候選 m⁵C 位點落在引子結合區之外？",
+         opts:["沒有 C 引子黏合較快","固定的引子序列會覆蓋該鹼基的判讀","可提高 RNA 產量","可移除 poly-A 尾"],correct:1,
+         exp:"引子本身的鹼基會決定該位置，遮蓋模板真實的甲基化狀態。你讀到的會是引子。"}
+      ]}
+  },
+  {
+    tag:"步驟 06", title:"PCR 與判讀", short:"擴增後判讀 C 與 T",
+    intro:"手上有了穩定的 cDNA 與針對轉換後股的引子，PCR 便透過重複的溫度步驟擴增目標區域，再由定序判讀每個位置。甲基化的答案就是一個字母：C 代表已甲基化，T 代表未甲基化。執行單一循環可看三個溫度步驟，或快轉觀察定義明確的擴增子如何超越模板族群。",
+    pcr:true,
+    panels:[
+      {h:"原理",html:`每個循環重複三個溫度：<b>變性</b>（約 95 °C，雙股分離）、<b>黏合</b>（約 55 °C，引子結合）、<b>延伸</b>（約 72 °C，聚合酶複製）。前兩個循環，引子會從一端延伸成<b>長度不一的滑脫產物 (run-off)</b>；要到第 3 循環，才會出現由兩支引子界定的<b>定義明確擴增子</b>，之後每循環加倍。定序判讀各位點：<span style="color:var(--m5C);font-weight:700">C</span> 表示轉換中存留（m⁵C）；<span style="color:var(--U);font-weight:700">T</span> 則否。`},
+      {a:true,html:`<b>類比。</b>最初幾個循環就像影印一頁太長、放不進玻璃板的紙——邊緣會印出拖尾。一旦兩側邊界都定好（兩支引子），每份拷貝都是同一頁裁切好的紙，影印機再印上十億次。定序儀就是那位把每個存留的「C」圈起來的校對員。`},
+      {flow:[
+        {h:"擴增",p:"以針對轉換後股的引子進行 PCR，從極微量起始物富集目標位點。"},
+        {h:"定義明確擴增子勝出",p:"滑脫產物線性增加；由兩端界定的擴增子以 2ⁿ 增長並占主導。"},
+        {h:"定序",p:"單一位點用 Sanger；全轉錄體圖譜用 NGS。"},
+        {h:"判定甲基化",p:"每個位點：C/(C+T) 比例 = 甲基化程度。100% C = 完全甲基化。"}
+      ]},
+      {h:"解讀比例",html:`在一群分子中，甲基化很少是全有或全無。讀取中呈現 C 相對於 T 的比例即為<b>甲基化程度</b>——例如 30 C : 70 T 的讀取 ≈ 該胞嘧啶約 30% 甲基化。`},
+      {story:true,h:"科學小故事 · PCR 的誕生",html:`PCR 由 <b>Kary Mullis</b> 於 1983 年構思——據他所述，靈感來自某個週五夜在加州公路開車途中，並將部分功勞歸給當時服用的迷幻藥。他因此獲 1993 年諾貝爾化學獎（奠基論文：<b>Mullis & Faloona, 1987</b>，<a href="https://doi.org/10.1016/0076-6879(87)55023-6" target="_blank" rel="noopener">Methods Enzymol, doi:10.1016/0076-6879(87)55023-6</a>）。但他晚年公開否認 HIV 導致愛滋、相信占星，備受爭議。啟示：一項改變世界的技術，與發明者在其他領域的判斷力可以完全脫鉤——評估科學要看證據，不看掛名。`},
+      {story:true,h:"科學小故事 · 兩度諾貝爾的人",html:`Sanger 定序以 <b>Fred Sanger</b> 命名，他是史上僅有的兩位、兩度獲諾貝爾化學獎者之一——分別因蛋白質定序（1958）與 DNA 定序（1980；方法：<a href="https://doi.org/10.1073/pnas.74.12.5463" target="_blank" rel="noopener">Sanger 等人，PNAS 1977, doi:10.1073/pnas.74.12.5463</a>）。他曾自稱只是「一個在實驗室裡瞎忙的傢伙」，幾乎不收學生、堅持親自做實驗——與現代 PI（計畫主持人）模式恰恰相反。`}
+    ],
+    quiz:{title:"自我檢測 — 判讀",
+      questions:[
+        {q:"為什麼定義完整的擴增子大約要到第 3 循環之後才出現？",
+         opts:["聚合酶在那之前都是冷的","唯有當某條由引子起始的股本身被再複製一次，兩端才都由引子界定","定序從第 3 循環開始","前幾個循環變性失敗"],correct:1,
+         exp:"第 1 循環由原始模板產生滑脫產物；長度固定、兩端界定的擴增子，需要一條起點由某引子設定的股，再被複製到另一支引子——最早在第 3 循環才可能出現。"},
+        {q:"在某個胞嘧啶位點，讀取中有 8 個 C 與 2 個 T。甲基化程度約為…",
+         opts:["0%","20%","80%","100%"],correct:2,
+         exp:"C/(C+T) = 8/10 = 80%。存留的 C 為已甲基化；此比例即為整群分子的甲基化程度。"}
+      ]}
+  }
+];
+
+/* =========================================================
+   STATE + RENDER
+   ========================================================= */
+const state={active:0,cleared:new Array(MODULES.length).fill(false)};
+const stepperEl=document.getElementById('stepper');
+const mainEl=document.getElementById('main');
+
+function renderStepper(){
+  stepperEl.innerHTML=MODULES.map((m,i)=>`
+    <li class="step ${state.cleared[i]?'done':''}" data-i="${i}" role="button" tabindex="0" aria-current="${i===state.active}">
+      <span class="num">${state.cleared[i]?'✓':String(i+1).padStart(2,'0')}</span>
+      <span class="lab">${m.title}<span class="sub">${m.short}</span></span>
+    </li>`).join('');
+  stepperEl.querySelectorAll('.step').forEach(s=>{
+    const go=()=>setActive(+s.dataset.i);
+    s.addEventListener('click',go);
+    s.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});
+  });
+  const n=state.cleared.filter(Boolean).length;
+  document.getElementById('progresslabel').textContent=`${n} / ${MODULES.length} 個模組已完成`;
+  document.getElementById('progressbar').style.width=(n/MODULES.length*100)+'%';
+}
+
+function panelHTML(p){
+  if(p.a) return `<div class="panel"><div class="analogy">${p.html}</div></div>`;
+  if(p.flow) return `<div class="panel"><h3>流程</h3><div class="flow">${
+    p.flow.map((s,i)=>`<div class="stepcard"><div class="n">${String(i+1).padStart(2,'0')}</div><h4>${s.h}</h4><p>${s.p}</p></div>`).join('')}</div></div>`;
+  if(p.story) return `<div class="panel story"><h3>${p.h}</h3><p>${p.html}</p></div>`;
+  if(p.ref) return `<p class="ref">${p.html}</p>`;
+  return `<div class="panel"><h3>${p.h}</h3><p>${p.html}</p></div>`;
+}
+function diagramHTML(m){
+  if(!m.diagram) return '';
+  return `<div class="panel diagram ${m.wide?'wide':''}"><h3>示意圖${m.wide?' <span class="scrollhint">· 滑動可平移</span>':''}</h3>${m.diagram}${m.diagramCap?`<p class="diag-cap">${m.diagramCap}</p>`:''}</div>`;
+}
+function quizHTML(q,mi){
+  return `<div class="quiz"><h3>${q.title}</h3>
+    ${q.questions.map((item,qi)=>`
+      <div class="q" data-mi="${mi}" data-qi="${qi}">
+        <p class="qtext">${qi+1}. ${item.q}</p>
+        ${item.opts.map((o,oi)=>`<button class="opt" data-oi="${oi}">${o}</button>`).join('')}
+        <p class="explain"></p>
+      </div>`).join('')}
+    <p class="quizdone">✓ 模組完成</p></div>`;
+}
+function benchHTML(){
+  return `<div class="bench-panel">
+    <h3>轉換工作檯 — 親手操作</h3>
+    <p class="hint">點選「參考」列上任一個 <b style="color:var(--C)">藍色 C</b> 使其甲基化（會變成紫色——即 m⁵C）。接著加入亞硫酸氫鹽；「轉換」列會逐欄對齊地出現在其正下方，「cDNA 判讀」列隨後跟上。</p>
+    <div class="align" id="align"></div>
+    <div class="benchctl">
+      <button class="btn primary" id="convertBtn">加入亞硫酸氫鹽 →</button>
+      <button class="btn" id="readBtn" disabled>反轉錄 + 判讀 →</button>
+      <button class="btn ghost" id="resetBtn">重設序列</button>
+      <span class="stagelab" id="stagelab">階段 · 編輯</span>
+    </div>
+    <div class="readout" id="readout">先讓幾個胞嘧啶甲基化，再加入亞硫酸氫鹽，觀察未甲基化的 C 去胺基變成 U。</div>
+  </div>`;
+}
+function pcrHTML(){
+  return `<div class="pcr-panel">
+    <h3>PCR 循環模擬器</h3>
+    <p class="hint" style="color:#9DB3AA;font-size:13.5px;margin:0 0 14px">執行單一循環可看變性 → 黏合 → 延伸。快轉到 30 循環，觀察<b style="color:var(--m5C)">定義明確的擴增子</b>呈指數增長，而<b style="color:var(--C)">模板 + 滑脫產物</b>族群僅線性增長。</p>
+    <div class="pcr-top">
+      <div>
+        <div class="pcrstage" id="pcrStage">
+          <svg class="pcrsvg" viewBox="0 0 360 130" role="img" aria-label="DNA 雙股變性、引子黏合、聚合酶延伸">
+            <rect id="topStrand" x="40" y="55" width="280" height="9" rx="4.5" fill="var(--C)"/>
+            <rect id="botStrand" x="40" y="66" width="280" height="9" rx="4.5" fill="var(--A)"/>
+            <g id="primers" opacity="0">
+              <rect x="40" y="40" width="46" height="8" rx="4" fill="var(--G)"/>
+              <rect x="274" y="82" width="46" height="8" rx="4" fill="var(--G)"/>
+            </g>
+            <rect id="newBot" x="40" y="40" width="280" height="8" rx="4" fill="var(--m5C)" opacity="0"/>
+            <rect id="newTop" x="40" y="82" width="280" height="8" rx="4" fill="var(--m5C)" opacity="0"/>
+          </svg>
+        </div>
+        <div class="pcrpop" id="pcrPop" hidden>
+          <div class="lane"><span class="lane-l">模板 + 滑脫產物<br><em>長、長度不一</em></span><div class="lane-cells" id="laneLong"></div><span class="lane-n" id="longN">1</span></div>
+          <div class="lane"><span class="lane-l">定義明確擴增子<br><em>兩支引子界定</em></span><div class="lane-cells" id="laneShort"></div><span class="lane-n" id="shortN">0</span></div>
+          <p class="pop-note" id="popNote"></p>
+        </div>
+      </div>
+      <div class="pcr-stats">
+        <div class="lbl">循環</div>
+        <div class="big"><span id="cycleNum">0</span> <span style="font-size:.5em;color:#7FE0B0">/ 30</span></div>
+        <div class="copies">目標拷貝總數 ≈ 2<sup id="expN">0</sup> = <b id="copyCount">1</b></div>
+        <div class="pcr-bar"><i id="pcrBar"></i></div>
+        <div class="phase" id="phaseLabel"><span class="dot" style="background:#3a4b45"></span>idle — ready to cycle</div>
+      </div>
+    </div>
+    <div class="pcrctl">
+      <button class="btn primary" id="cycleBtn">執行單一循環</button>
+      <button class="btn" id="runBtn">快轉到 30 循環</button>
+      <button class="btn ghost" id="pcrReset">重設</button>
+    </div>
+    <p class="pcr-note">註：真實 PCR 並非無限。約 25–35 循環後試劑耗盡、擴增進入平台期——2ⁿ 曲線是早期、指數增長的理想情況。</p>
+  </div>`;
+}
+
+function renderModule(){
+  const m=MODULES[state.active];
+  mainEl.innerHTML=MODULES.map((mod,i)=>{
+    const body=`
+      <div class="modhead"><span class="tag">${mod.tag}</span></div>
+      <h2>${mod.title}</h2>
+      <p class="intro">${mod.intro}</p>
+      ${diagramHTML(mod)}
+      ${mod.bench?benchHTML():''}
+      ${mod.pcr?pcrHTML():''}
+      ${mod.panels.map(panelHTML).join('')}
+      ${quizHTML(mod.quiz,i)}
+      <div class="navrow">
+        <button class="prev" ${i===0?'disabled':''}>← ${i===0?'開始':MODULES[i-1].title}</button>
+        <button class="next" ${i===MODULES.length-1?'disabled':''}>${i===MODULES.length-1?'流程結束':MODULES[i+1].title+' →'}</button>
+      </div>`;
+    return `<section class="module ${i===state.active?'active':''}" data-i="${i}">${body}</section>`;
+  }).join('');
+
+  mainEl.querySelectorAll('.q').forEach(qEl=>{
+    const mi=+qEl.dataset.mi,qi=+qEl.dataset.qi;
+    const item=MODULES[mi].quiz.questions[qi];
+    const explain=qEl.querySelector('.explain');
+    qEl.querySelectorAll('.opt').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        if(qEl.dataset.answered)return;
+        qEl.dataset.answered='1';
+        const oi=+btn.dataset.oi;
+        qEl.querySelectorAll('.opt').forEach(b=>b.classList.add('locked'));
+        if(oi===item.correct){btn.classList.add('correct');}
+        else{btn.classList.add('wrong');qEl.querySelectorAll('.opt')[item.correct].classList.add('correct');}
+        explain.textContent=item.exp;explain.classList.add('show');
+        checkQuizComplete(mi);
+      });
+    });
+  });
+
+  const sec=mainEl.querySelector('.module.active');
+  sec.querySelector('.prev')?.addEventListener('click',()=>setActive(state.active-1));
+  sec.querySelector('.next')?.addEventListener('click',()=>setActive(state.active+1));
+
+  if(m.bench) initBench();
+  if(m.pcr) initPCR();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function checkQuizComplete(mi){
+  const sec=mainEl.querySelector(`.module[data-i="${mi}"]`);
+  const qs=sec.querySelectorAll('.q');
+  if([...qs].filter(q=>q.dataset.answered).length===qs.length){
+    sec.querySelector('.quizdone').classList.add('show');
+    if(!state.cleared[mi]){state.cleared[mi]=true;renderStepper();}
+  }
+}
+function setActive(i){if(i<0||i>=MODULES.length)return;state.active=i;renderStepper();renderModule();}
+
+/* =========================================================
+   CONVERSION BENCH (aligned reference / converted / read)
+   ========================================================= */
+const SEQ="AUCGCAUCCGAACGUCGCAUC".split("");
+let bench;
+function initBench(){
+  bench={bases:SEQ.map(b=>({base:b,methyl:false})),stage:"edit"};
+  drawBench();
+  const cBtn=document.getElementById('convertBtn'),rBtn=document.getElementById('readBtn');
+  cBtn.disabled=false;rBtn.disabled=true;
+  document.getElementById('stagelab').textContent="階段 · 編輯";
+  document.getElementById('readout').innerHTML="先讓幾個胞嘧啶甲基化，再加入亞硫酸氫鹽，觀察未甲基化的 C 去胺基變成 U。";
+  cBtn.onclick=convert;rBtn.onclick=readResult;document.getElementById('resetBtn').onclick=initBench;
+}
+function cell(base,opts={}){
+  const cls=opts.cls||base;
+  return `<div class="nt ${cls} ${opts.clickable?'clickable':''} ${opts.ghost?'ghost':''} ${opts.flip?'flip':''}" ${opts.i!==undefined?`data-i="${opts.i}"`:''}>${base}${opts.label?`<small>${opts.label}</small>`:''}</div>`;
+}
+function drawBench(){
+  const showConv=bench.stage==="converted"||bench.stage==="read";
+  const showRead=bench.stage==="read";
+  const refCells=bench.bases.map((b,i)=>{
+    if(b.base==="C"&&b.methyl) return cell("C",{cls:"m5C",label:"m⁵C",i,clickable:bench.stage==="edit"});
+    return cell(b.base,{i,clickable:bench.stage==="edit"&&b.base==="C"});
+  }).join('');
+  const convCells=bench.bases.map(b=>{
+    if(!showConv) return cell(b.base,{ghost:true});
+    if(b.base==="C"&&b.methyl) return cell("C",{cls:"m5C",label:"m⁵C"});
+    if(b.base==="C"&&!b.methyl) return cell("U",{cls:"U",flip:true});
+    return cell(b.base);
+  }).join('');
+  const readCells=bench.bases.map(b=>{
+    if(!showRead) return cell(b.base,{ghost:true});
+    if(b.base==="C"&&b.methyl) return cell("C",{cls:"callC"});
+    if(b.base==="C"&&!b.methyl) return cell("T",{cls:"callT"});
+    if(b.base==="U") return cell("T",{cls:"T"});
+    return cell(b.base);
+  }).join('');
+
+  document.getElementById('align').innerHTML=`
+    <div class="arow"><span class="rl">參考</span><span class="end">5′</span><div class="cells">${refCells}</div><span class="end">3′</span></div>
+    <div class="arow"><span class="rl">轉換</span><span class="end">5′</span><div class="cells">${convCells}</div><span class="end">3′</span></div>
+    <div class="arow"><span class="rl">cDNA 判讀</span><span class="end"></span><div class="cells">${readCells}</div><span class="end"></span></div>`;
+
+  if(bench.stage==="edit"){
+    document.querySelectorAll('#align .nt.clickable').forEach(n=>{
+      n.addEventListener('click',()=>{const i=+n.dataset.i;bench.bases[i].methyl=!bench.bases[i].methyl;drawBench();});
+    });
+  }
+}
+function convert(){
+  bench.stage="converted";drawBench();
+  document.getElementById('convertBtn').disabled=true;
+  document.getElementById('readBtn').disabled=false;
+  document.getElementById('stagelab').textContent="階段 · 已轉換";
+  const surv=bench.bases.filter(b=>b.base==="C"&&b.methyl).length;
+  document.getElementById('readout').innerHTML=`已加入亞硫酸氫鹽。未甲基化的胞嘧啶走完整條路徑變成 <b style="color:var(--U)">U</b>（轉換列）。有 <b>${surv}</b> 個胞嘧啶存留——它們戴著甲基頭盔（m⁵C）。現在進行反轉錄並判讀。`;
+}
+function readResult(){
+  bench.stage="read";drawBench();
+  document.getElementById('readBtn').disabled=true;
+  document.getElementById('stagelab').textContent="階段 · 判讀";
+  const methPos=bench.bases.map((b,i)=>(b.base==="C"&&b.methyl)?i+1:null).filter(x=>x);
+  document.getElementById('readout').innerHTML= methPos.length
+    ? `在 cDNA 判讀列中，每個 <b class="callC">C</b> 都是一次甲基化判定（m⁵C），位於第 ${methPos.join('、')} 位。每個 <b class="callT">T</b> 原本都是未甲基化的胞嘧啶。這一個字母的差異，就是你全部的結果。`
+    : `沒有任何胞嘧啶存留——你沒有讓任何一個甲基化。判讀列在胞嘧啶位點全為 T：這正是完全未甲基化對照組應有的樣子。`;
+}
+
+/* =========================================================
+   PCR SIMULATOR
+   ========================================================= */
+let pcr;
+const PHASES=[
+  {cls:"stage-denature",name:"變性 95 °C — 雙股分離",color:"var(--U)"},
+  {cls:"stage-anneal",  name:"黏合 55 °C — 引子結合",       color:"var(--C)"},
+  {cls:"stage-extend",  name:"延伸 72 °C — 聚合酶複製",  color:"var(--A)"}
+];
+function fmt(n){return n.toLocaleString('en-US');}
+function reduceMotion(){return window.matchMedia('(prefers-reduced-motion:reduce)').matches;}
+function initPCR(){
+  pcr={cycle:0,busy:false};
+  showDuplex();
+  updatePCRStats();
+  setPhase(-1);
+  document.getElementById('cycleBtn').onclick=()=>runCycle();
+  document.getElementById('pcrReset').onclick=initPCR;
+  document.getElementById('runBtn').onclick=fastForward;
+}
+function showDuplex(){document.getElementById('pcrStage').hidden=false;document.getElementById('pcrPop').hidden=true;}
+function showPop(){document.getElementById('pcrStage').hidden=true;document.getElementById('pcrPop').hidden=false;}
+function setPhase(idx){
+  const stage=document.getElementById('pcrStage');
+  const label=document.getElementById('phaseLabel');
+  stage.classList.remove('stage-denature','stage-anneal','stage-extend');
+  if(idx<0){label.innerHTML=`<span class="dot" style="background:#3a4b45"></span>閒置 — 準備開始循環`;return;}
+  const p=PHASES[idx];
+  stage.classList.add(p.cls);
+  label.innerHTML=`<span class="dot" style="background:${p.color}"></span>${p.name}`;
+}
+function updatePCRStats(){
+  document.getElementById('cycleNum').textContent=pcr.cycle;
+  document.getElementById('expN').textContent=pcr.cycle;
+  document.getElementById('copyCount').textContent=fmt(Math.pow(2,pcr.cycle));
+  document.getElementById('pcrBar').style.width=(pcr.cycle/30*100)+'%';
+}
+function runCycle(done){
+  if(pcr.busy||pcr.cycle>=30){done&&done();return;}
+  showDuplex();
+  pcr.busy=true;
+  const btns=[document.getElementById('cycleBtn'),document.getElementById('runBtn')];
+  btns.forEach(b=>b.disabled=true);
+  if(reduceMotion()){
+    pcr.cycle++;updatePCRStats();setPhase(-1);pcr.busy=false;btns.forEach(b=>b.disabled=false);done&&done();return;
+  }
+  setPhase(0);
+  setTimeout(()=>setPhase(1),440);
+  setTimeout(()=>setPhase(2),880);
+  setTimeout(()=>{
+    pcr.cycle++;updatePCRStats();setPhase(-1);
+    pcr.busy=false;btns.forEach(b=>b.disabled=false);done&&done();
+  },1440);
+}
+/* accurate-ish population model:
+   long  = original template + single-primer run-off products  -> grows linearly (~1 + 2n)
+   short = defined amplicon bounded by both primers            -> total(2^n) minus long */
+function drawPopulation(){
+  const n=pcr.cycle;
+  const total=Math.pow(2,n);
+  const long=1+2*n;
+  const short=Math.max(0,total-long);
+  document.getElementById('longN').textContent=fmt(long);
+  document.getElementById('shortN').textContent=fmt(short);
+  document.getElementById('laneLong').innerHTML=Array.from({length:Math.min(long,10)},()=>'<i class="lc long"></i>').join('');
+  document.getElementById('laneShort').innerHTML=Array.from({length:Math.min(short,80)},()=>'<i class="lc short"></i>').join('');
+  const note=document.getElementById('popNote');
+  if(short<=0) note.textContent='第 1–2 循環：只有模板 + 單引子滑脫產物（長、長度不一）。尚無完全定義的擴增子。';
+  else note.textContent='從第 3 循環起，定義明確的擴增子（由兩支引子界定）出現並每循環加倍——很快就壓過線性增長的模板 + 滑脫產物族群。';
+}
+function fastForward(){
+  if(pcr.busy)return;
+  pcr.busy=true;
+  showPop();
+  document.getElementById('phaseLabel').innerHTML='<span class="dot" style="background:var(--m5C)"></span>族群視圖 — 指數擴增子 對 線性模板';
+  const btns=[document.getElementById('cycleBtn'),document.getElementById('runBtn')];
+  btns.forEach(b=>b.disabled=true);
+  const rm=reduceMotion();
+  const finish=()=>{pcr.busy=false;btns.forEach(b=>b.disabled=false);};
+  if(rm){pcr.cycle=30;updatePCRStats();drawPopulation();finish();return;}
+  const tick=()=>{
+    if(pcr.cycle>=30){finish();return;}
+    pcr.cycle++;updatePCRStats();drawPopulation();
+    setTimeout(tick,70);
+  };
+  tick();
+}
+
+/* =========================================================
+   INIT + KEYBOARD
+   ========================================================= */
+renderStepper();renderModule();
+document.addEventListener('keydown',e=>{
+  if(['INPUT','TEXTAREA','BUTTON'].includes(document.activeElement.tagName))return;
+  if(e.key==='ArrowRight')setActive(state.active+1);
+  if(e.key==='ArrowLeft')setActive(state.active-1);
+});
+</script>
+</body>
+</html>
