@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bisulfite Grid Viewer</title>
+<style>
+  :root{
+    --bg:#F7F6F2;
+    --panel:#FFFFFF;
+    --ink:#1C1C1A;
+    --muted:#6B6B62;
+    --border:#DAD7CC;
+    --accent:#1F5D5B;
+    --accent-light:#E4EFEC;
+    --meth:#15151A;
+    --unmeth:#FFFFFF;
+    --other:#D9822B;
+    --warn:#B5442A;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    padding:28px 32px 60px;
+  }
+  .wrap{max-width:1180px;margin:0 auto;}
+  header{margin-bottom:22px;border-bottom:1px solid var(--border);padding-bottom:16px;}
+  h1{font-size:20px;font-weight:600;margin:0 0 4px;letter-spacing:0.2px;}
+  .sub{color:var(--muted);font-size:13px;line-height:1.5;max-width:800px;}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:18px;}
+  .panel h2{font-size:13px;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted);margin:0 0 12px;font-weight:600;}
+  .row{display:flex;gap:14px;flex-wrap:wrap;align-items:center;}
+  input[type=file]{font-size:13px;}
+  textarea{
+    width:100%;min-height:110px;font-family:ui-monospace,SFMono-Regular,Consolas,"Courier New",monospace;
+    font-size:12.5px;padding:10px;border:1px solid var(--border);border-radius:6px;background:#FDFCFA;
+    resize:vertical;
+  }
+  button{
+    background:var(--accent);color:#fff;border:none;border-radius:6px;
+    padding:9px 16px;font-size:13px;font-weight:500;cursor:pointer;
+  }
+  button.secondary{background:#fff;color:var(--accent);border:1px solid var(--accent);}
+  button.tiny{padding:5px 10px;font-size:12px;}
+  button:hover{opacity:0.9;}
+  button:disabled{opacity:0.4;cursor:default;}
+  .hint{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.5;}
+  .controls{display:flex;gap:18px;flex-wrap:wrap;align-items:center;margin-top:4px;}
+  .controls label{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:6px;}
+  select, input[type=range]{vertical-align:middle;}
+  .ctx-box{display:flex;gap:16px;flex-wrap:wrap;align-items:center;}
+  .ctx-item{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;background:#FDFCFA;border:1px solid var(--border);border-radius:6px;padding:6px 12px;}
+  .ctx-item input{width:15px;height:15px;}
+  #warnings{display:none;background:#FBEDE7;border:1px solid #E6B49B;color:var(--warn);
+    border-radius:8px;padding:10px 14px;font-size:12.5px;margin-bottom:14px;white-space:pre-line;}
+  #canvasHolder{overflow-x:auto;border:1px solid var(--border);border-radius:8px;background:#fff;padding:12px;}
+  canvas{display:block;}
+  .legend{display:flex;gap:22px;flex-wrap:wrap;margin-top:14px;font-size:12.5px;color:var(--ink);align-items:center;}
+  .legend .item{display:flex;align-items:center;gap:7px;}
+  .swatch{width:14px;height:14px;border-radius:3px;border:1px solid #B8B6AA;display:inline-block;}
+  #stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:16px;}
+  .stat{background:var(--accent-light);border-radius:8px;padding:10px 12px;}
+  .stat .val{font-size:19px;font-weight:600;color:var(--accent);}
+  .stat .lbl{font-size:11.5px;color:var(--muted);margin-top:2px;}
+  #tooltip{
+    position:fixed;pointer-events:none;background:#1C1C1A;color:#fff;font-size:12px;
+    padding:6px 9px;border-radius:5px;display:none;z-index:10;line-height:1.5;white-space:pre;
+  }
+  footer{margin-top:26px;font-size:11.5px;color:var(--muted);}
+  #alignmentHolder{overflow-x:auto;}
+  .align-block{margin-bottom:18px;}
+  .align-block .block-label{font-size:11px;color:var(--muted);margin-bottom:4px;}
+  .align-row{display:flex;align-items:baseline;white-space:pre;font-family:ui-monospace,SFMono-Regular,Consolas,"Courier New",monospace;font-size:12.5px;line-height:1.65;}
+  .align-row .rowname{width:150px;flex:0 0 150px;color:var(--ink);font-weight:600;font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:8px;}
+  .align-row.ref .rowname{color:var(--accent);}
+  .align-row .seq{letter-spacing:0.5px;}
+  .b-match{color:var(--ink);}
+  .b-meth{background:#15151A;color:#fff;border-radius:2px;}
+  .b-unmeth{background:#fff;color:#1F5D5B;font-weight:700;border-bottom:2px solid #1F5D5B;}
+  .b-other{background:#D9822B;color:#fff;border-radius:2px;}
+  .b-qcgood{color:#B0AEA2;}
+  .b-qcbad{background:#FBE3C4;color:#8A5A16;border-radius:2px;}
+  .b-mismatch{background:#F3C9C0;color:#8A2E1B;border-radius:2px;}
+  .b-gap{color:#D8D5CC;}
+  .align-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:6px;margin-bottom:16px;font-size:11.5px;color:var(--muted);align-items:center;}
+  .align-legend .item{display:flex;align-items:center;gap:6px;}
+  .align-legend .chip{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;padding:1px 5px;border-radius:2px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Bisulfite cloning grid viewer</h1>
+    <div class="sub">Upload a .txt file: first sequence is the reference (unconverted), the rest are Sanger reads from individual clones, all aligned to the same length. Works for DNA (5mC, typically CpG) or RNA (m5C, any sequence context) bisulfite data, choose which C-context(s) to score below. Scored cytosines are white (converted / unmodified), black (unconverted / modified), or orange (mismatch, gap, or unscored change).</div>
+  </header>
+
+  <div class="panel">
+    <h2>1. Load data</h2>
+    <div class="row">
+      <input type="file" id="fileInput" accept=".txt,.fa,.fasta" />
+      <button class="secondary" id="loadExample" type="button">Load example data</button>
+    </div>
+    <div class="hint">Accepted format: FASTA (<code>&gt;name</code> header followed by sequence) is preferred. Plain text with one sequence per line (first line = reference) also works. Non-letter characters are stripped automatically.</div>
+    <textarea id="pasteArea" placeholder="...or paste FASTA / line-based sequence data here, then click Parse"></textarea>
+    <div class="row" style="margin-top:10px;">
+      <button id="parseBtn" type="button">Parse data</button>
+      <span id="parseStatus" class="hint"></span>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>2. C-context to score</h2>
+    <div class="hint" style="margin-top:0;margin-bottom:10px;">Select which base immediately 3' of a reference C should count as a scored site (e.g. CG for classic CpG methylation, or CA/CC/CT for non-CpG contexts common in RNA m5C). Unselected C positions are used only as a bisulfite-conversion efficiency control.</div>
+    <div class="ctx-box">
+      <label class="ctx-item"><input type="checkbox" id="ctxA" checked> CA</label>
+      <label class="ctx-item"><input type="checkbox" id="ctxC" checked> CC</label>
+      <label class="ctx-item"><input type="checkbox" id="ctxG" checked> CG</label>
+      <label class="ctx-item"><input type="checkbox" id="ctxT" checked> CT</label>
+      <button class="secondary tiny" id="ctxAll" type="button">All contexts</button>
+      <button class="secondary tiny" id="ctxCpGOnly" type="button">CpG only (CG)</button>
+    </div>
+  </div>
+
+  <div id="warnings"></div>
+
+  <div class="panel" id="resultsPanel" style="display:none;">
+    <h2>3. Grid</h2>
+    <div class="controls">
+      <label>Cell size <input type="range" id="cellSize" min="12" max="34" value="20"></label>
+      <label>Sort rows by
+        <select id="sortSelect">
+          <option value="original">Original order</option>
+          <option value="methHigh">% modified (high to low)</option>
+          <option value="methLow">% modified (low to high)</option>
+          <option value="name">Clone name</option>
+        </select>
+      </label>
+      <button class="secondary" id="downloadBtn" type="button">Download PNG</button>
+    </div>
+    <div id="canvasHolder" style="margin-top:14px;">
+      <canvas id="grid"></canvas>
+    </div>
+    <div class="legend">
+      <div class="item"><span class="swatch" style="background:#fff;"></span>Unmodified (converted C&rarr;T)</div>
+      <div class="item"><span class="swatch" style="background:#15151A;"></span>Modified (unconverted C)</div>
+      <div class="item"><span class="swatch" style="background:#D9822B;"></span>Mismatch / gap / other base</div>
+    </div>
+    <div id="stats"></div>
+  </div>
+
+  <div class="panel" id="alignmentPanel" style="display:none;">
+    <h2>4. Full alignment</h2>
+    <div class="row" style="margin-bottom:10px;">
+      <label style="font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:6px;">Characters per line
+        <select id="wrapWidth">
+          <option value="40">40</option>
+          <option value="60" selected>60</option>
+          <option value="80">80</option>
+          <option value="120">120</option>
+        </select>
+      </label>
+    </div>
+    <div class="align-legend">
+      <div class="item"><span class="chip b-meth">C</span>Scored, modified</div>
+      <div class="item"><span class="chip b-unmeth">T</span>Scored, converted</div>
+      <div class="item"><span class="chip b-other">X</span>Scored, mismatch</div>
+      <div class="item"><span class="chip b-qcbad">C</span>QC context, unconverted (check efficiency)</div>
+      <div class="item"><span class="chip b-qcgood">T</span>QC context, converted (expected)</div>
+      <div class="item"><span class="chip b-mismatch">X</span>Non-C mismatch</div>
+      <div class="item"><span class="chip b-match">A</span>Match to reference</div>
+    </div>
+    <div id="alignmentHolder"></div>
+  </div>
+
+  <footer>Column numbers correspond to the index of scored C sites along the reference, in the context(s) currently selected above (hover a cell for the absolute reference position and context). Conversion efficiency is computed from C's in reference positions not in the selected context(s), and flags incomplete bisulfite conversion (expected above 95%).</footer>
+</div>
+
+<div id="tooltip"></div>
+
+<script>
+const COLORS = { meth: '#15151A', unmeth: '#FFFFFF', other: '#D9822B', border: '#B8B6AA', bg: '#FFFFFF' };
+
+let rawData = null;
+
+function stripSeq(s){ return s.replace(/[^A-Za-z\-\.]/g,'').toUpperCase(); }
+
+function parseInput(text){
+  const lines = text.split(/\r?\n/);
+  const hasHeaders = lines.some(l => l.trim().startsWith('>'));
+  let entries = [];
+  if(hasHeaders){
+    let current = null;
+    for(const raw of lines){
+      const line = raw.trim();
+      if(line === '') continue;
+      if(line.startsWith('>')){
+        if(current) entries.push(current);
+        current = { name: line.slice(1).trim() || ('Seq'+(entries.length+1)), seq:'' };
+      } else {
+        if(!current) current = { name:'Seq1', seq:'' };
+        current.seq += stripSeq(line);
+      }
+    }
+    if(current) entries.push(current);
+  } else {
+    const nonblank = lines.map(l=>l.trim()).filter(l=>l.length>0);
+    entries = nonblank.map((l,i)=>{
+      const parts = l.split(/\t/);
+      if(parts.length >= 2){
+        return { name: parts[0].trim(), seq: stripSeq(parts.slice(1).join('')) };
+      }
+      return { name: i===0 ? 'Reference' : ('Clone'+i), seq: stripSeq(l) };
+    });
+  }
+  return entries.filter(e => e.seq.length > 0);
+}
+
+function buildRawData(entries){
+  if(entries.length < 2) throw new Error('Need at least a reference sequence and one clone sequence.');
+  const ref = entries[0];
+  const clones = entries.slice(1);
+  const refLen = ref.seq.length;
+
+  const warnings = [];
+  clones.forEach(c=>{
+    if(c.seq.length !== refLen){
+      warnings.push('"'+c.name+'" length ('+c.seq.length+') differs from reference ('+refLen+'); it will be compared up to the shorter length and extra/missing positions marked as mismatch.');
+    }
+  });
+
+  return { refName: ref.name, refSeq: ref.seq, clones, warnings };
+}
+
+function getSelectedContexts(){
+  const set = new Set();
+  ['A','C','G','T'].forEach(b=>{
+    const el = document.getElementById('ctx'+b);
+    if(el && el.checked) set.add(b);
+  });
+  return set;
+}
+
+function computeAnalysis(raw, selectedContexts){
+  const refSeq = raw.refSeq;
+  const refLen = refSeq.length;
+  const scoredCols = [];
+  const otherCCols = [];
+  for(let i=0;i<refLen;i++){
+    if(refSeq[i] === 'C'){
+      const next = i+1 < refLen ? refSeq[i+1] : null;
+      if(next && selectedContexts.has(next)) scoredCols.push({ pos:i, ctx:next });
+      else otherCCols.push(i);
+    }
+  }
+
+  const rows = raw.clones.map(c=>{
+    const cells = scoredCols.map(sc=>{
+      const inRange = sc.pos < c.seq.length;
+      const base = inRange ? c.seq[sc.pos] : null;
+      let status;
+      if(!inRange) status = 'other';
+      else if(base === 'C') status = 'meth';
+      else if(base === 'T') status = 'unmeth';
+      else status = 'other';
+      return { col: sc.pos, ctx: sc.ctx, base: base, status: status };
+    });
+    const methCount = cells.filter(function(x){return x.status==='meth';}).length;
+    const unmethCount = cells.filter(function(x){return x.status==='unmeth';}).length;
+    const denom = methCount + unmethCount;
+    const methPct = denom > 0 ? (methCount/denom*100) : null;
+
+    let convOK=0, convTotal=0;
+    otherCCols.forEach(function(col){
+      if(col < c.seq.length){
+        const b = c.seq[col];
+        if(b === 'T'){ convOK++; convTotal++; }
+        else if(b === 'C'){ convTotal++; }
+      }
+    });
+    const convPct = convTotal>0 ? (convOK/convTotal*100) : null;
+
+    return { name:c.name, cells:cells, methPct:methPct, convPct:convPct };
+  });
+
+  return { scoredCols: scoredCols, otherCCols: otherCCols, rows: rows };
+}
+
+function loadExample(){
+  const refSeq = 'ATCGACATACCGTACGATCACAATCACCGTACGATTACGACATACCATCACCGTACGACATACGATCACGATCG';
+  const clones = [];
+  for(let n=1;n<=8;n++){
+    let arr = refSeq.split('');
+    for(let i=0;i<arr.length;i++){
+      if(arr[i]==='C'){
+        const next = i+1<arr.length ? refSeq[i+1] : null;
+        if(next === 'G'){
+          const p = 0.25 + (n%3)*0.2;
+          if(Math.random() > p) arr[i]='T';
+        } else if(next === 'A' || next === 'C'){
+          const p = 0.55 + (n%2)*0.15;
+          if(Math.random() > p) arr[i]='T';
+        } else {
+          if(Math.random() < 0.97) arr[i]='T';
+        }
+      }
+    }
+    if(Math.random()<0.3){
+      const p = Math.floor(Math.random()*arr.length);
+      arr[p] = 'A';
+    }
+    clones.push({ name:'Clone_'+n, seq: arr.join('') });
+  }
+  let out = '>Reference\n'+refSeq+'\n';
+  clones.forEach(function(c){ out += '>'+c.name+'\n'+c.seq+'\n'; });
+  document.getElementById('pasteArea').value = out;
+  document.getElementById('parseStatus').textContent = 'Example RNA data loaded (mixed CA/CC/CG contexts) — click Parse data.';
+}
+
+function render(){
+  if(!rawData) return;
+  const selectedContexts = getSelectedContexts();
+  const analysis = computeAnalysis(rawData, selectedContexts);
+
+  const cellSize = parseInt(document.getElementById('cellSize').value,10);
+  const sortMode = document.getElementById('sortSelect').value;
+
+  let rows = analysis.rows.slice();
+  if(sortMode==='methHigh') rows.sort(function(a,b){ return (b.methPct==null?-1:b.methPct) - (a.methPct==null?-1:a.methPct); });
+  else if(sortMode==='methLow') rows.sort(function(a,b){ return (a.methPct==null?999:a.methPct) - (b.methPct==null?999:b.methPct); });
+  else if(sortMode==='name') rows.sort(function(a,b){ return a.name.localeCompare(b.name); });
+
+  const cols = analysis.scoredCols;
+  const rowLabelW = 190;
+  const colHeaderH = 70;
+  const padding = 10;
+  const width = rowLabelW + Math.max(cols.length,1)*cellSize + padding*2;
+  const height = colHeaderH + Math.max(rows.length,1)*cellSize + padding*2;
+
+  const canvas = document.getElementById('grid');
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = width*dpr;
+  canvas.height = height*dpr;
+  canvas.style.width = width+'px';
+  canvas.style.height = height+'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,width,height);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(0,0,width,height);
+
+  ctx.font = '10px ui-monospace, Consolas, monospace';
+  ctx.fillStyle = '#6B6B62';
+  cols.forEach(function(sc,ci){
+    const x = rowLabelW + ci*cellSize + cellSize/2 + padding;
+    ctx.save();
+    ctx.translate(x, colHeaderH-6+padding);
+    ctx.rotate(-Math.PI/2.2);
+    ctx.textAlign='left';
+    ctx.fillText(String(sc.pos+1)+' (C'+sc.ctx+')', 0, 0);
+    ctx.restore();
+  });
+
+  rows.forEach(function(row,ri){
+    const y = colHeaderH + ri*cellSize + padding;
+    ctx.fillStyle = '#1C1C1A';
+    ctx.font = '600 11.5px -apple-system, Segoe UI, sans-serif';
+    ctx.textAlign='left';
+    ctx.textBaseline='middle';
+    ctx.fillText(row.name, 0, y+cellSize/2);
+    ctx.fillStyle = '#6B6B62';
+    ctx.font = '10.5px -apple-system, Segoe UI, sans-serif';
+    const pctText = row.methPct==null ? 'n/a' : row.methPct.toFixed(0)+'% mod';
+    ctx.fillText(pctText, rowLabelW-58, y+cellSize/2);
+
+    row.cells.forEach(function(cell,ci){
+      const x = rowLabelW + ci*cellSize + padding;
+      let color = COLORS.other;
+      if(cell.status==='meth') color = COLORS.meth;
+      else if(cell.status==='unmeth') color = COLORS.unmeth;
+      ctx.fillStyle = color;
+      ctx.fillRect(x,y,cellSize-1.5,cellSize-1.5);
+      ctx.strokeStyle = COLORS.border;
+      ctx.lineWidth = 0.6;
+      ctx.strokeRect(x+0.5,y+0.5,cellSize-2,cellSize-2);
+    });
+  });
+
+  canvas._gridMeta = { rows:rows, cols:cols, cellSize:cellSize, rowLabelW:rowLabelW, colHeaderH:colHeaderH, padding:padding };
+  renderStats(rows, cols, analysis.otherCCols);
+
+  const scoredPosSet = new Set(analysis.scoredCols.map(function(sc){ return sc.pos; }));
+  document.getElementById('alignmentPanel').style.display = 'block';
+  renderAlignment(rawData, scoredPosSet);
+}
+
+function renderStats(rows, cols, otherCCols){
+  const statsEl = document.getElementById('stats');
+  const methVals = rows.map(function(r){return r.methPct;}).filter(function(v){return v!=null;});
+  const convVals = rows.map(function(r){return r.convPct;}).filter(function(v){return v!=null;});
+  const meanMeth = methVals.length ? (methVals.reduce(function(a,b){return a+b;},0)/methVals.length) : null;
+  const meanConv = convVals.length ? (convVals.reduce(function(a,b){return a+b;},0)/convVals.length) : null;
+  const minConv = convVals.length ? Math.min.apply(null, convVals) : null;
+
+  statsEl.innerHTML =
+    '<div class="stat"><div class="val">'+rows.length+'</div><div class="lbl">Clones</div></div>'+
+    '<div class="stat"><div class="val">'+cols.length+'</div><div class="lbl">Scored C sites</div></div>'+
+    '<div class="stat"><div class="val">'+otherCCols.length+'</div><div class="lbl">QC (unscored) C sites</div></div>'+
+    '<div class="stat"><div class="val">'+(meanMeth!=null ? meanMeth.toFixed(1)+'%' : 'n/a')+'</div><div class="lbl">Mean % modified</div></div>'+
+    '<div class="stat"><div class="val">'+(meanConv!=null ? meanConv.toFixed(1)+'%' : 'n/a')+'</div><div class="lbl">Mean conversion efficiency</div></div>'+
+    '<div class="stat"><div class="val">'+(minConv!=null ? minConv.toFixed(1)+'%' : 'n/a')+'</div><div class="lbl">Lowest conversion efficiency</div></div>';
+}
+
+function classifyBase(refBase, cloneBase, isScoredC){
+  if(cloneBase == null || cloneBase === '-' || cloneBase === '.') return 'gap';
+  if(refBase === 'C'){
+    if(isScoredC){
+      if(cloneBase==='C') return 'meth';
+      if(cloneBase==='T') return 'unmeth';
+      return 'other';
+    } else {
+      if(cloneBase==='T') return 'qcgood';
+      if(cloneBase==='C') return 'qcbad';
+      return 'other';
+    }
+  }
+  return cloneBase === refBase ? 'match' : 'mismatch';
+}
+
+function renderAlignment(rawData, scoredPosSet){
+  const holder = document.getElementById('alignmentHolder');
+  const wrapWidth = parseInt(document.getElementById('wrapWidth').value, 10);
+  const refSeq = rawData.refSeq;
+  const refLen = refSeq.length;
+  let html = '';
+
+  for(let start=0; start<refLen; start+=wrapWidth){
+    const end = Math.min(start+wrapWidth, refLen);
+    html += '<div class="align-block">';
+    html += '<div class="block-label">Positions '+(start+1)+'\u2013'+end+'</div>';
+
+    let refSpans = '';
+    for(let i=start;i<end;i++){
+      refSpans += '<span class="b-match">'+refSeq[i]+'</span>';
+    }
+    html += '<div class="align-row ref"><div class="rowname">'+escapeHtml(rawData.refName)+'</div><div class="seq">'+refSpans+'</div></div>';
+
+    rawData.clones.forEach(function(c){
+      let spans = '';
+      for(let i=start;i<end;i++){
+        const cloneBase = i < c.seq.length ? c.seq[i] : null;
+        const cls = classifyBase(refSeq[i], cloneBase, scoredPosSet.has(i));
+        const displayChar = cloneBase == null ? '\u00b7' : cloneBase;
+        spans += '<span class="b-'+cls+'">'+displayChar+'</span>';
+      }
+      html += '<div class="align-row"><div class="rowname">'+escapeHtml(c.name)+'</div><div class="seq">'+spans+'</div></div>';
+    });
+
+    html += '</div>';
+  }
+
+  holder.innerHTML = html;
+}
+
+function escapeHtml(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function attachTooltip(){
+  const canvas = document.getElementById('grid');
+  const tooltip = document.getElementById('tooltip');
+  canvas.addEventListener('mousemove', function(e){
+    const meta = canvas._gridMeta;
+    if(!meta){ return; }
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const rows = meta.rows, cols = meta.cols, cellSize = meta.cellSize, rowLabelW = meta.rowLabelW, colHeaderH = meta.colHeaderH, padding = meta.padding;
+    if(mx < rowLabelW+padding || my < colHeaderH+padding){ tooltip.style.display='none'; return; }
+    const ci = Math.floor((mx-rowLabelW-padding)/cellSize);
+    const ri = Math.floor((my-colHeaderH-padding)/cellSize);
+    if(ci<0||ci>=cols.length||ri<0||ri>=rows.length){ tooltip.style.display='none'; return; }
+    const row = rows[ri];
+    const cell = row.cells[ci];
+    const statusLabel = cell.status==='meth' ? 'Modified (C retained)' : cell.status==='unmeth' ? 'Unmodified (C to T converted)' : 'Mismatch / gap / other';
+    tooltip.textContent = row.name+'\nRef position: '+(cell.col+1)+' (context C'+cell.ctx+')\nRead base: '+(cell.base==null?'-':cell.base)+'\n'+statusLabel;
+    tooltip.style.left = (e.clientX+14)+'px';
+    tooltip.style.top = (e.clientY+14)+'px';
+    tooltip.style.display = 'block';
+  });
+  canvas.addEventListener('mouseleave', function(){ tooltip.style.display='none'; });
+}
+
+function doParse(){
+  const fileVal = document.getElementById('pasteArea').value;
+  const statusEl = document.getElementById('parseStatus');
+  const warnEl = document.getElementById('warnings');
+  try{
+    const entries = parseInput(fileVal);
+    rawData = buildRawData(entries);
+    if(rawData.warnings.length){
+      warnEl.style.display='block';
+      warnEl.textContent = rawData.warnings.join('\n');
+    } else {
+      warnEl.style.display='none';
+    }
+    document.getElementById('resultsPanel').style.display='block';
+    statusEl.textContent = 'Parsed '+rawData.clones.length+' clone(s) against a '+rawData.refSeq.length+' nt reference.';
+    render();
+  } catch(err){
+    document.getElementById('resultsPanel').style.display='none';
+    warnEl.style.display='block';
+    warnEl.textContent = 'Parse error: ' + err.message;
+  }
+}
+
+document.getElementById('fileInput').addEventListener('change', function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(){
+    document.getElementById('pasteArea').value = reader.result;
+    document.getElementById('parseStatus').textContent = 'File loaded — click Parse data.';
+  };
+  reader.readAsText(file);
+});
+
+document.getElementById('loadExample').addEventListener('click', loadExample);
+document.getElementById('parseBtn').addEventListener('click', doParse);
+document.getElementById('cellSize').addEventListener('input', render);
+document.getElementById('sortSelect').addEventListener('change', render);
+document.getElementById('wrapWidth').addEventListener('change', render);
+['ctxA','ctxC','ctxG','ctxT'].forEach(function(id){
+  document.getElementById(id).addEventListener('change', render);
+});
+document.getElementById('ctxAll').addEventListener('click', function(){
+  ['ctxA','ctxC','ctxG','ctxT'].forEach(function(id){ document.getElementById(id).checked = true; });
+  render();
+});
+document.getElementById('ctxCpGOnly').addEventListener('click', function(){
+  document.getElementById('ctxA').checked = false;
+  document.getElementById('ctxC').checked = false;
+  document.getElementById('ctxG').checked = true;
+  document.getElementById('ctxT').checked = false;
+  render();
+});
+document.getElementById('downloadBtn').addEventListener('click', function(){
+  const canvas = document.getElementById('grid');
+  const link = document.createElement('a');
+  link.download = 'bisulfite_grid.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+});
+
+attachTooltip();
+</script>
+</body>
+</html>
