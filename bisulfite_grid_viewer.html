@@ -125,15 +125,32 @@
   </div>
 
   <div class="panel">
-    <h2>2. C-context to score</h2>
-    <div class="hint" style="margin-top:0;margin-bottom:10px;">Select which base immediately 3' of a reference C should count as a scored site (e.g. CG for classic CpG methylation, or CA/CC/CT for non-CpG contexts common in RNA m5C). Unselected C positions are used only as a bisulfite-conversion efficiency control.</div>
-    <div class="ctx-box">
-      <label class="ctx-item"><input type="checkbox" id="ctxA" checked> CA</label>
-      <label class="ctx-item"><input type="checkbox" id="ctxC" checked> CC</label>
-      <label class="ctx-item"><input type="checkbox" id="ctxG" checked> CG</label>
-      <label class="ctx-item"><input type="checkbox" id="ctxT" checked> CT</label>
-      <button class="secondary tiny" id="ctxAll" type="button">All contexts</button>
-      <button class="secondary tiny" id="ctxCpGOnly" type="button">CpG only (CG)</button>
+    <h2>2. Sites to score</h2>
+    <div class="row" style="margin-bottom:12px;">
+      <label class="ctx-item"><input type="radio" name="siteMode" id="siteModeContext" value="context" checked> C-context sites</label>
+      <label class="ctx-item"><input type="radio" name="siteMode" id="siteModeRegion" value="region"> Sequence region (all bases)</label>
+    </div>
+
+    <div id="contextControls">
+      <div class="hint" style="margin-top:0;margin-bottom:10px;">Select which base immediately 3' of a reference C should count as a scored site (e.g. CG for classic CpG methylation, or CA/CC/CT for non-CpG contexts common in RNA m5C). Unselected C positions are used only as a bisulfite-conversion efficiency control.</div>
+      <div class="ctx-box">
+        <label class="ctx-item"><input type="checkbox" id="ctxA" checked> CA</label>
+        <label class="ctx-item"><input type="checkbox" id="ctxC" checked> CC</label>
+        <label class="ctx-item"><input type="checkbox" id="ctxG" checked> CG</label>
+        <label class="ctx-item"><input type="checkbox" id="ctxT" checked> CT</label>
+        <button class="secondary tiny" id="ctxAll" type="button">All contexts</button>
+        <button class="secondary tiny" id="ctxCpGOnly" type="button">CpG only (CG)</button>
+      </div>
+    </div>
+
+    <div id="regionControls" style="display:none;">
+      <div class="hint" style="margin-top:0;margin-bottom:10px;">Show every position in the chosen window, not just C's. The reference sequence's base identity is shown in a row above the grid. Inside the grid: white = matches reference; black = reference C read as C (unconverted); grey = reference C read as T (converted); orange = any other mismatch.</div>
+      <div class="ctx-box">
+        <label class="ctx-item">From position <input type="number" id="regionStart" min="1" value="1" style="width:70px;margin-left:6px;"></label>
+        <label class="ctx-item">To position <input type="number" id="regionEnd" min="1" value="1" style="width:70px;margin-left:6px;"></label>
+        <button class="secondary tiny" id="regionFull" type="button">Full length</button>
+        <span id="regionRangeHint" class="hint" style="margin:0;"></span>
+      </div>
     </div>
   </div>
 
@@ -158,7 +175,7 @@
     <div id="canvasHolder" style="margin-top:14px;">
       <canvas id="grid"></canvas>
     </div>
-    <div class="legend">
+    <div class="legend" id="gridLegend">
       <div class="item"><span class="swatch" style="background:#fff;"></span>Unmodified (converted C&rarr;T)</div>
       <div class="item"><span class="swatch" style="background:#15151A;"></span>Modified (unconverted C)</div>
       <div class="item"><span class="swatch" style="background:#D9822B;"></span>Mismatch / gap / other base</div>
@@ -240,7 +257,7 @@
 <div id="tooltip"></div>
 
 <script>
-const COLORS = { meth: '#15151A', unmeth: '#FFFFFF', other: '#D9822B', border: '#B8B6AA', bg: '#FFFFFF' };
+const COLORS = { meth: '#15151A', unmeth: '#FFFFFF', other: '#D9822B', convertedC: '#ABA8A0', border: '#B8B6AA', bg: '#FFFFFF' };
 const EXPORT_SCALE = 300/96; // renders PNG exports at 300 DPI (canvas layout is authored at ~96 CSS px/inch)
 
 let rawData = null;
@@ -303,32 +320,77 @@ function getSelectedContexts(){
   return set;
 }
 
-function computeAnalysis(raw, selectedContexts){
+function getSiteConfig(refLen){
+  const mode = document.querySelector('input[name="siteMode"]:checked').value;
+  if(mode === 'region'){
+    let start = parseInt(document.getElementById('regionStart').value, 10);
+    let end = parseInt(document.getElementById('regionEnd').value, 10);
+    if(isNaN(start)) start = 1;
+    if(isNaN(end)) end = refLen;
+    start = Math.max(1, Math.min(start, refLen));
+    end = Math.max(1, Math.min(end, refLen));
+    if(end < start){ const t=start; start=end; end=t; }
+    return { mode:'region', startIdx: start-1, endIdx: end-1 };
+  }
+  return { mode:'context', contexts: getSelectedContexts() };
+}
+
+function siteLabel(sc){
+  if(sc.refBase === 'C') return 'C'+(sc.ctx || '?');
+  return sc.refBase;
+}
+
+function computeAnalysis(raw, siteConfig){
   const refSeq = raw.refSeq;
   const refLen = refSeq.length;
   const scoredCols = [];
-  const otherCCols = [];
-  for(let i=0;i<refLen;i++){
-    if(refSeq[i] === 'C'){
-      const next = i+1 < refLen ? refSeq[i+1] : null;
-      if(next && selectedContexts.has(next)) scoredCols.push({ pos:i, ctx:next });
-      else otherCCols.push(i);
+
+  if(siteConfig.mode === 'region'){
+    for(let i=siteConfig.startIdx; i<=siteConfig.endIdx && i<refLen; i++){
+      const refBase = refSeq[i];
+      if(refBase === 'C'){
+        const next = i+1 < refLen ? refSeq[i+1] : null;
+        scoredCols.push({ pos:i, refBase:'C', ctx: next });
+      } else {
+        scoredCols.push({ pos:i, refBase: refBase, ctx: null });
+      }
+    }
+  } else {
+    const selectedContexts = siteConfig.contexts;
+    for(let i=0;i<refLen;i++){
+      if(refSeq[i] === 'C'){
+        const next = i+1 < refLen ? refSeq[i+1] : null;
+        if(next && selectedContexts.has(next)) scoredCols.push({ pos:i, refBase:'C', ctx:next });
+      }
     }
   }
+
+  const scoredPosSet = new Set(scoredCols.map(function(sc){ return sc.pos; }));
+  const otherCCols = [];
+  for(let i=0;i<refLen;i++){
+    if(refSeq[i] === 'C' && !scoredPosSet.has(i)) otherCCols.push(i);
+  }
+
+  const isRegion = siteConfig.mode === 'region';
 
   const rows = raw.clones.map(c=>{
     const cells = scoredCols.map(sc=>{
       const inRange = sc.pos < c.seq.length;
       const base = inRange ? c.seq[sc.pos] : null;
       let status;
-      if(!inRange) status = 'other';
-      else if(base === 'C') status = 'meth';
-      else if(base === 'T') status = 'unmeth';
-      else status = 'other';
-      return { col: sc.pos, ctx: sc.ctx, base: base, status: status };
+      if(!inRange){
+        status = 'other';
+      } else if(sc.refBase === 'C'){
+        if(base === 'C') status = 'meth';
+        else if(base === 'T') status = isRegion ? 'convertedC' : 'unmeth';
+        else status = 'other';
+      } else {
+        status = (base === sc.refBase) ? 'match' : 'other';
+      }
+      return { col: sc.pos, ctx: sc.ctx, refBase: sc.refBase, base: base, status: status };
     });
     const methCount = cells.filter(function(x){return x.status==='meth';}).length;
-    const unmethCount = cells.filter(function(x){return x.status==='unmeth';}).length;
+    const unmethCount = cells.filter(function(x){return x.status==='unmeth' || x.status==='convertedC';}).length;
     const denom = methCount + unmethCount;
     const methPct = denom > 0 ? (methCount/denom*100) : null;
 
@@ -345,7 +407,7 @@ function computeAnalysis(raw, selectedContexts){
     return { name:c.name, cells:cells, methPct:methPct, convPct:convPct };
   });
 
-  return { scoredCols: scoredCols, otherCCols: otherCCols, rows: rows };
+  return { scoredCols: scoredCols, otherCCols: otherCCols, rows: rows, mode: siteConfig.mode };
 }
 
 function loadExample(){
@@ -379,9 +441,11 @@ function loadExample(){
   document.getElementById('parseStatus').textContent = 'Example RNA data loaded (mixed CA/CC/CG contexts) — click Parse data.';
 }
 
-function drawGridToCanvas(canvas, rows, cols, cellSize, sortMode, scale){
+function drawGridToCanvas(canvas, rows, cols, cellSize, sortMode, mode, scale){
   const rowLabelW = 190;
-  const colHeaderH = 70;
+  const numberHeaderH = 70;
+  const refRowH = mode === 'region' ? 20 : 0;
+  const colHeaderH = numberHeaderH + refRowH;
   const padding = 10;
   const groupGap = sortMode==='group' ? Math.max(12, Math.round(cellSize*0.6)) : 0;
 
@@ -414,12 +478,37 @@ function drawGridToCanvas(canvas, rows, cols, cellSize, sortMode, scale){
   cols.forEach(function(sc,ci){
     const x = rowLabelW + ci*cellSize + cellSize/2 + padding;
     ctx.save();
-    ctx.translate(x, colHeaderH-6+padding);
+    ctx.translate(x, numberHeaderH-6+padding);
     ctx.rotate(-Math.PI/2.2);
     ctx.textAlign='left';
-    ctx.fillText(String(sc.pos+1)+' (C'+sc.ctx+')', 0, 0);
+    ctx.fillText(String(sc.pos+1)+' ('+siteLabel(sc)+')', 0, 0);
     ctx.restore();
   });
+
+  if(mode === 'region'){
+    // Reference-sequence base identity row, sitting above the grid (not inside cells).
+    const refRowY = numberHeaderH + padding + refRowH/2;
+    ctx.fillStyle = '#F3F1EA';
+    ctx.fillRect(rowLabelW+padding, numberHeaderH+padding, cols.length*cellSize, refRowH);
+    cols.forEach(function(sc,ci){
+      const x = rowLabelW + ci*cellSize + padding + cellSize/2;
+      ctx.fillStyle = '#1C1C1A';
+      ctx.font = '700 '+Math.max(9,Math.min(cellSize-6,13))+'px ui-monospace, Consolas, monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(sc.refBase, x, refRowY);
+    });
+    ctx.fillStyle = '#8C8A80';
+    ctx.font = '9px -apple-system, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('ref', rowLabelW-6, refRowY);
+    ctx.strokeStyle = '#DAD7CC'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, numberHeaderH+padding+refRowH+0.5);
+    ctx.lineTo(width-padding, numberHeaderH+padding+refRowH+0.5);
+    ctx.stroke();
+  }
 
   rows.forEach(function(row,ri){
     const y = rowY[ri];
@@ -457,11 +546,14 @@ function drawGridToCanvas(canvas, rows, cols, cellSize, sortMode, scale){
 
     row.cells.forEach(function(cell,ci){
       const x = rowLabelW + ci*cellSize + padding;
+      const cw = cellSize-1.5;
+
       let color = COLORS.other;
       if(cell.status==='meth') color = COLORS.meth;
-      else if(cell.status==='unmeth') color = COLORS.unmeth;
+      else if(cell.status==='unmeth' || cell.status==='match') color = COLORS.unmeth;
+      else if(cell.status==='convertedC') color = COLORS.convertedC;
       ctx.fillStyle = color;
-      ctx.fillRect(x,y,cellSize-1.5,cellSize-1.5);
+      ctx.fillRect(x,y,cw,cw);
       ctx.strokeStyle = COLORS.border;
       ctx.lineWidth = 0.6;
       ctx.strokeRect(x+0.5,y+0.5,cellSize-2,cellSize-2);
@@ -471,12 +563,13 @@ function drawGridToCanvas(canvas, rows, cols, cellSize, sortMode, scale){
   return { width:width, height:height, rowY:rowY, rowLabelW:rowLabelW, colHeaderH:colHeaderH, padding:padding };
 }
 
-let lastGridRows = [], lastGridCols = [], lastCellSize = 20, lastSortMode = 'original';
+let lastGridRows = [], lastGridCols = [], lastCellSize = 20, lastSortMode = 'original', lastGridMode = 'context';
 
 function render(){
   if(!rawData) return;
-  const selectedContexts = getSelectedContexts();
-  const analysis = computeAnalysis(rawData, selectedContexts);
+  const siteConfig = getSiteConfig(rawData.refSeq.length);
+  const analysis = computeAnalysis(rawData, siteConfig);
+  updateGridLegend(analysis.mode);
 
   const cellSize = parseInt(document.getElementById('cellSize').value,10);
   const sortMode = document.getElementById('sortSelect').value;
@@ -497,12 +590,12 @@ function render(){
   const cols = analysis.scoredCols;
   const dpr = window.devicePixelRatio || 1;
   const canvas = document.getElementById('grid');
-  const layout = drawGridToCanvas(canvas, rows, cols, cellSize, sortMode, dpr);
+  const layout = drawGridToCanvas(canvas, rows, cols, cellSize, sortMode, analysis.mode, dpr);
 
   canvas._gridMeta = { rows:rows, cols:cols, cellSize:cellSize, rowLabelW:layout.rowLabelW, colHeaderH:layout.colHeaderH, padding:layout.padding, rowY:layout.rowY };
   renderStats(rows, cols, analysis.otherCCols);
 
-  lastGridRows = rows; lastGridCols = cols; lastCellSize = cellSize; lastSortMode = sortMode;
+  lastGridRows = rows; lastGridCols = cols; lastCellSize = cellSize; lastSortMode = sortMode; lastGridMode = analysis.mode;
 
   const scoredPosSet = new Set(analysis.scoredCols.map(function(sc){ return sc.pos; }));
   document.getElementById('alignmentPanel').style.display = 'block';
@@ -525,11 +618,28 @@ function renderStats(rows, cols, otherCCols){
 
   statsEl.innerHTML =
     '<div class="stat"><div class="val">'+rows.length+'</div><div class="lbl">Clones</div></div>'+
-    '<div class="stat"><div class="val">'+cols.length+'</div><div class="lbl">Scored C sites</div></div>'+
+    '<div class="stat"><div class="val">'+cols.length+'</div><div class="lbl">Scored sites</div></div>'+
     '<div class="stat"><div class="val">'+otherCCols.length+'</div><div class="lbl">QC (unscored) C sites</div></div>'+
     '<div class="stat"><div class="val">'+(meanMeth!=null ? meanMeth.toFixed(1)+'%' : 'n/a')+'</div><div class="lbl">Mean % modified</div></div>'+
     '<div class="stat"><div class="val">'+(meanConv!=null ? meanConv.toFixed(1)+'%' : 'n/a')+'</div><div class="lbl">Mean conversion efficiency</div></div>'+
     '<div class="stat"><div class="val">'+(minConv!=null ? minConv.toFixed(1)+'%' : 'n/a')+'</div><div class="lbl">Lowest conversion efficiency</div></div>';
+}
+
+function updateGridLegend(mode){
+  const el = document.getElementById('gridLegend');
+  if(mode === 'region'){
+    el.innerHTML =
+      '<div class="item"><span class="swatch" style="background:#F3F1EA;border:1px solid #DAD7CC;"></span>Reference base (shown in the row above the grid)</div>'+
+      '<div class="item"><span class="swatch" style="background:#fff;"></span>Matches reference (any base)</div>'+
+      '<div class="item"><span class="swatch" style="background:#15151A;"></span>Reference C, read as C (modified)</div>'+
+      '<div class="item"><span class="swatch" style="background:'+COLORS.convertedC+';"></span>Reference C, read as T (converted)</div>'+
+      '<div class="item"><span class="swatch" style="background:#D9822B;"></span>Mismatch / gap / other base</div>';
+  } else {
+    el.innerHTML =
+      '<div class="item"><span class="swatch" style="background:#fff;"></span>Unmodified (converted C&rarr;T)</div>'+
+      '<div class="item"><span class="swatch" style="background:#15151A;"></span>Modified (unconverted C)</div>'+
+      '<div class="item"><span class="swatch" style="background:#D9822B;"></span>Mismatch / gap / other base</div>';
+  }
 }
 
 function classifyBase(refBase, cloneBase, isScoredC){
@@ -731,7 +841,7 @@ function renderLociSelector(scoredCols){
       render();
     });
     label.appendChild(cb);
-    label.appendChild(document.createTextNode((sc.pos+1)+' (C'+sc.ctx+')'));
+    label.appendChild(document.createTextNode((sc.pos+1)+' ('+siteLabel(sc)+')'));
     holder.appendChild(label);
   });
 }
@@ -758,7 +868,7 @@ function computeGroupStats(analysisRows, filteredSites){
     filteredSites.forEach(function(fs){
       const cell = r.cells[fs.idx];
       if(cell.status==='meth') methCount++;
-      else if(cell.status==='unmeth') unmethCount++;
+      else if(cell.status==='unmeth' || cell.status==='convertedC') unmethCount++;
     });
     const denom = methCount+unmethCount;
     return { name:r.name, methPct: denom>0 ? methCount/denom*100 : null };
@@ -787,12 +897,12 @@ function computeGroupPerSiteStats(analysisRows, filteredSites){
       members.forEach(function(r){
         const cell = r.cells[fs.idx];
         if(cell.status==='meth') methCount++;
-        else if(cell.status==='unmeth') unmethCount++;
+        else if(cell.status==='unmeth' || cell.status==='convertedC') unmethCount++;
       });
       const denom = methCount+unmethCount;
       return { group:g, pct: denom>0 ? methCount/denom*100 : null, n: members.length, color: colorForGroup(g) };
     });
-    return { pos: fs.sc.pos, ctx: fs.sc.ctx, perGroup: perGroup };
+    return { pos: fs.sc.pos, ctx: fs.sc.ctx, refBase: fs.sc.refBase, perGroup: perGroup };
   });
 }
 
@@ -932,7 +1042,7 @@ function drawGroupChartToCanvas(canvas, analysisRows, filteredSites, scale){
       ctx.translate(xBase + (activeGroups.length*(groupBarW+groupGap))/2, chartBottom+8);
       ctx.rotate(-Math.PI/2.2);
       ctx.textAlign='left';
-      ctx.fillText(String(site.pos+1)+' (C'+site.ctx+')', 0, 0);
+      ctx.fillText(String(site.pos+1)+' ('+siteLabel(site)+')', 0, 0);
       ctx.restore();
     });
 
@@ -964,8 +1074,12 @@ function attachTooltip(){
     if(ci<0||ci>=cols.length||ri<0){ tooltip.style.display='none'; return; }
     const row = rows[ri];
     const cell = row.cells[ci];
-    const statusLabel = cell.status==='meth' ? 'Modified (C retained)' : cell.status==='unmeth' ? 'Unmodified (C to T converted)' : 'Mismatch / gap / other';
-    tooltip.textContent = row.name+'\nRef position: '+(cell.col+1)+' (context C'+cell.ctx+')\nRead base: '+(cell.base==null?'-':cell.base)+'\n'+statusLabel;
+    const statusLabel = cell.status==='meth' ? 'Modified (C retained)' :
+      cell.status==='unmeth' ? 'Unmodified (C to T converted)' :
+      cell.status==='convertedC' ? 'Converted (C to T)' :
+      cell.status==='match' ? 'Matches reference' :
+      'Mismatch / gap / other';
+    tooltip.textContent = row.name+'\nRef position: '+(cell.col+1)+' ('+(cell.refBase==='C' ? ('context C'+cell.ctx) : ('ref base '+cell.refBase))+')\nRead base: '+(cell.base==null?'-':cell.base)+'\n'+statusLabel;
     tooltip.style.left = (e.clientX+14)+'px';
     tooltip.style.top = (e.clientY+14)+'px';
     tooltip.style.display = 'block';
@@ -989,6 +1103,11 @@ function doParse(){
     document.getElementById('resultsPanel').style.display='block';
     statusEl.textContent = 'Parsed '+rawData.clones.length+' clone(s) against a '+rawData.refSeq.length+' nt reference.';
     buildAssignmentUI(rawData.clones);
+    document.getElementById('regionStart').max = rawData.refSeq.length;
+    document.getElementById('regionEnd').max = rawData.refSeq.length;
+    document.getElementById('regionStart').value = 1;
+    document.getElementById('regionEnd').value = rawData.refSeq.length;
+    document.getElementById('regionRangeHint').textContent = '(reference is '+rawData.refSeq.length+' nt long)';
     selectedLociPositions = null;
     prevScoredPositions = null;
     render();
@@ -1029,6 +1148,28 @@ document.getElementById('ctxCpGOnly').addEventListener('click', function(){
   document.getElementById('ctxT').checked = false;
   render();
 });
+
+function updateSiteModeVisibility(){
+  const mode = document.querySelector('input[name="siteMode"]:checked').value;
+  document.getElementById('contextControls').style.display = mode==='context' ? 'block' : 'none';
+  document.getElementById('regionControls').style.display = mode==='region' ? 'block' : 'none';
+}
+document.querySelectorAll('input[name="siteMode"]').forEach(function(radio){
+  radio.addEventListener('change', function(){
+    updateSiteModeVisibility();
+    render();
+  });
+});
+document.getElementById('regionStart').addEventListener('change', render);
+document.getElementById('regionEnd').addEventListener('change', render);
+document.getElementById('regionFull').addEventListener('click', function(){
+  if(!rawData) return;
+  document.getElementById('regionStart').value = 1;
+  document.getElementById('regionEnd').value = rawData.refSeq.length;
+  render();
+});
+updateSiteModeVisibility();
+
 function downloadCanvasAsPNG(canvas, filename){
   let dataUrl;
   try{
@@ -1058,7 +1199,7 @@ function downloadCanvasAsPNG(canvas, filename){
 document.getElementById('downloadBtn').addEventListener('click', function(){
   if(!lastGridRows.length){ return; }
   const exportCanvas = document.createElement('canvas');
-  drawGridToCanvas(exportCanvas, lastGridRows, lastGridCols, lastCellSize, lastSortMode, EXPORT_SCALE);
+  drawGridToCanvas(exportCanvas, lastGridRows, lastGridCols, lastCellSize, lastSortMode, lastGridMode, EXPORT_SCALE);
   downloadCanvasAsPNG(exportCanvas, 'bisulfite_grid_300dpi.png');
 });
 
